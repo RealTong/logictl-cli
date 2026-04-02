@@ -96,3 +96,27 @@ func TestDevicesInspectPrintsMatchingDevice(t *testing.T) {
 		t.Fatalf("inspect output included non-matching device:\n%s", out)
 	}
 }
+
+func TestDevicesListRejectsUnexpectedArgs(t *testing.T) {
+	cmd := newRootCmd(hidapi.FakeClient{
+		Devices: []hidapi.DeviceInfo{
+			{Path: "ignored", Product: "Should Not List"},
+		},
+	})
+
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"devices", "list", "foo"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil, want argument validation error")
+	}
+	if !strings.Contains(err.Error(), "foo") {
+		t.Fatalf("Execute error = %v, want failure mentioning unexpected arg", err)
+	}
+	if strings.Contains(buf.String(), "Should Not List") {
+		t.Fatalf("unexpected device output when args are invalid:\n%s", buf.String())
+	}
+}

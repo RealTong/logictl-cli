@@ -22,6 +22,7 @@ func newDevicesListCmd(client hidapi.Client) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List attached HID devices",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			devices, err := client.ListDevices()
 			if err != nil {
