@@ -3,10 +3,19 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/realtong/logi-cli/internal/app"
 )
+
+func TestStarterConfigContentIsNonEmpty(t *testing.T) {
+	if got := starterConfigContent(); len(got) == 0 {
+		t.Fatal("starterConfigContent returned empty content")
+	} else if !strings.Contains(string(got), "[[devices]]") {
+		t.Fatalf("starterConfigContent = %q, want embedded example config", string(got))
+	}
+}
 
 func TestInitCmdCreatesStarterConfigWithoutRepoLookup(t *testing.T) {
 	home := t.TempDir()
