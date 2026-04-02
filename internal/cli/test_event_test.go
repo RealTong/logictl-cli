@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -146,5 +147,81 @@ func TestResolveEventDevicePathCollapsesSupportedInterfacesForSamePhysicalDevice
 	}
 	if got != "mx-master-4-iface-1" {
 		t.Fatalf("resolveEventDevicePath() = %q, want %q", got, "mx-master-4-iface-1")
+	}
+}
+
+func TestTestEventDeviceCmdDefaultsToSemanticOutput(t *testing.T) {
+	buf := new(bytes.Buffer)
+	cmd := newTestEventDeviceCmd(
+		hidapi.FakeClient{
+			Devices: []hidapi.DeviceInfo{
+				{Path: "mx-master-4", VendorID: 0x046d, Product: "MX Master 4"},
+			},
+		},
+		func(path string) rawSource {
+			if path != "mx-master-4" {
+				t.Fatalf("openSource path = %q, want %q", path, "mx-master-4")
+			}
+			return fakeSource{
+				events: []RawReport{
+					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x20, 0x01, 0x00, 0x00}},
+					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+				},
+			}
+		},
+	)
+	cmd.SetOut(buf)
+	cmd.SetErr(io.Discard)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	got := buf.String()
+	if !strings.Contains(got, "thumb_button_down") {
+		t.Fatalf("output = %q, want thumb_button_down", got)
+	}
+	if !strings.Contains(got, "thumb_button_hold") {
+		t.Fatalf("output = %q, want thumb_button_hold", got)
+	}
+	if !strings.Contains(got, "hold(thumb_button)+move(down)") {
+		t.Fatalf("output = %q, want hold(thumb_button)+move(down)", got)
+	}
+	if strings.Contains(got, "02 40 00 00 00 00 00 00") {
+		t.Fatalf("output = %q, want semantic events instead of raw bytes", got)
+	}
+}
+
+func TestTestEventDeviceCmdRawFlagPreservesRawOutput(t *testing.T) {
+	buf := new(bytes.Buffer)
+	cmd := newTestEventDeviceCmd(
+		hidapi.FakeClient{
+			Devices: []hidapi.DeviceInfo{
+				{Path: "mx-master-4", VendorID: 0x046d, Product: "MX Master 4"},
+			},
+		},
+		func(path string) rawSource {
+			return fakeSource{
+				events: []RawReport{
+					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+				},
+			}
+		},
+	)
+	cmd.SetOut(buf)
+	cmd.SetErr(io.Discard)
+	cmd.SetArgs([]string{"--raw"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	got := buf.String()
+	if !strings.Contains(got, "02 40 00 00 00 00 00 00") {
+		t.Fatalf("output = %q, want raw bytes", got)
+	}
+	if strings.Contains(got, "thumb_button_down") {
+		t.Fatalf("output = %q, want raw output when --raw is set", got)
 	}
 }
