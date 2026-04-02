@@ -64,6 +64,25 @@ func TestDaemonStatusCmdReportsRunningDaemon(t *testing.T) {
 	}
 }
 
+func TestDaemonStatusCmdReportsStoppedWhenSocketMissing(t *testing.T) {
+	daemonApp := daemon.NewApp(testPaths(t))
+
+	cmd := newRootCmdWithDaemon(hidapi.FakeClient{}, daemonApp)
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"daemon", "status"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "stopped") {
+		t.Fatalf("status output = %q, want stopped", out)
+	}
+}
+
 func TestReloadCmdRequestsReload(t *testing.T) {
 	daemonApp := daemon.NewApp(testPaths(t))
 	ctx, cancel := context.WithCancel(context.Background())

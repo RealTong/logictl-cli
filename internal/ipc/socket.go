@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 const (
@@ -31,7 +32,24 @@ func Listen(socketPath string) (net.Listener, error) {
 	if err := os.MkdirAll(filepath.Dir(socketPath), 0o755); err != nil {
 		return nil, err
 	}
-	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+
+	if info, err := os.Lstat(socketPath); err == nil {
+		if info.Mode()&os.ModeSocket == 0 {
+			return nil, os.ErrExist
+		}
+
+		conn, dialErr := net.Dial("unix", socketPath)
+		if dialErr == nil {
+			conn.Close()
+			return nil, os.ErrExist
+		}
+		if !IsUnavailable(dialErr) {
+			return nil, dialErr
+		}
+		if err := os.Remove(socketPath); err != nil {
+			return nil, err
+		}
+	} else if !os.IsNotExist(err) {
 		return nil, err
 	}
 
@@ -61,6 +79,10 @@ func QueryStatus(socketPath string) (Status, error) {
 
 func RequestReload(socketPath string) (Status, error) {
 	return send(socketPath, Request{Command: CommandReload})
+}
+
+func IsUnavailable(err error) bool {
+	return errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOENT) || errors.Is(err, syscall.ECONNREFUSED)
 }
 
 func send(socketPath string, req Request) (Status, error) {

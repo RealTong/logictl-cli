@@ -32,6 +32,7 @@ func (r *Runtime) Reload(context.Context) (ipc.Status, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.status.Message = "reload requested"
-	return r.status, nil
+	status := r.status
+	status.Message = "reload requested"
+	return status, nil
 }

@@ -24,7 +24,14 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) Status() (ipc.Status, error) {
-	return ipc.QueryStatus(a.paths.SocketFile)
+	status, err := ipc.QueryStatus(a.paths.SocketFile)
+	if err != nil {
+		if ipc.IsUnavailable(err) {
+			return ipc.Status{Message: "stopped"}, nil
+		}
+		return ipc.Status{}, err
+	}
+	return status, nil
 }
 
 func (a *App) Reload() (ipc.Status, error) {
