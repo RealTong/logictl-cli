@@ -28,15 +28,16 @@ func newDevicesListCmd(client hidapi.Client) *cobra.Command {
 				return err
 			}
 
-			for i, device := range devices {
-				if i > 0 {
-					cmd.Println()
-				}
-				printDevice(cmd, device)
+			for _, device := range devices {
+				printDeviceSummary(cmd, device)
 			}
 			return nil
 		},
 	}
+}
+
+func printDeviceSummary(cmd *cobra.Command, device hidapi.DeviceInfo) {
+	fmt.Fprintf(cmd.OutOrStdout(), "%04x:%04x %s\n", device.VendorID, device.ProductID, device.Product)
 }
 
 func printDevice(cmd *cobra.Command, device hidapi.DeviceInfo) {

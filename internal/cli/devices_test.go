@@ -8,7 +8,7 @@ import (
 	"github.com/realtong/logi-cli/internal/hidapi"
 )
 
-func TestDevicesListPrintsKnownFields(t *testing.T) {
+func TestDevicesListPrintsSummaryLines(t *testing.T) {
 	cmd := newRootCmd(hidapi.FakeClient{
 		Devices: []hidapi.DeviceInfo{
 			{
@@ -24,6 +24,11 @@ func TestDevicesListPrintsKnownFields(t *testing.T) {
 				Product:         "MX Master 3",
 				Transport:       "USB",
 			},
+			{
+				VendorID:  0x046d,
+				ProductID: 0xb023,
+				Product:   "MX Keys",
+			},
 		},
 	})
 
@@ -37,20 +42,13 @@ func TestDevicesListPrintsKnownFields(t *testing.T) {
 	}
 
 	out := buf.String()
-	for _, want := range []string{
-		"Path: IOService:/AppleACPIPlatformExpert/PCI0@0",
-		"VID:PID: 046d:c548",
-		"Release: 0111",
-		"Interface: 1",
-		"Usage Page: 0001",
-		"Usage: 0002",
-		"Transport: USB",
-		"Manufacturer: Logitech",
-		"Product: MX Master 3",
-		"Serial: ABC123",
-	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("output missing %q:\n%s", want, out)
+	want := "046d:c548 MX Master 3\n046d:b023 MX Keys\n"
+	if out != want {
+		t.Fatalf("output = %q, want %q", out, want)
+	}
+	for _, unwanted := range []string{"Path:", "Release:", "Transport:", "Serial:"} {
+		if strings.Contains(out, unwanted) {
+			t.Fatalf("output unexpectedly included %q:\n%s", unwanted, out)
 		}
 	}
 }
