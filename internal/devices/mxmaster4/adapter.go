@@ -42,7 +42,6 @@ func (a *Adapter) Decode(report events.RawReport) (events.DeviceEvent, error) {
 
 	if a.thumbButtonHeld {
 		a.thumbButtonHeld = false
-		return buttonEvent(report, events.ButtonUp), nil
 	}
 
 	if state == 0x00 && deltaX == 0 && deltaY == 0 {

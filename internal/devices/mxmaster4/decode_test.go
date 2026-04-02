@@ -60,6 +60,24 @@ func TestAdapterDecodeHoldMoveDownFixture(t *testing.T) {
 	}
 }
 
+func TestAdapterDecodeHoldMoveDownFixtureDoesNotEmitThumbButtonUp(t *testing.T) {
+	reports := mustLoadFixtureReports(t, "thumb-button-hold-move-down.txt")
+	adapter := Adapter{}
+
+	for index, report := range reports {
+		event, err := adapter.Decode(report)
+		if err != nil {
+			if errors.Is(err, ErrUnsupportedReport) {
+				continue
+			}
+			t.Fatalf("Decode returned error: %v", err)
+		}
+		if event.Kind == events.ButtonUp && event.Control == "thumb_button" {
+			t.Fatalf("Decode() emitted thumb_button up at report %d: %#v", index, event)
+		}
+	}
+}
+
 func TestAdapterDecodeRejectsUnsupportedState(t *testing.T) {
 	adapter := Adapter{}
 

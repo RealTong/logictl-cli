@@ -243,7 +243,7 @@ func resolveSemanticEventDevicePath(hidClient hidapi.Client, explicitPath string
 			}
 			return explicitPath, nil
 		}
-		return explicitPath, nil
+		return "", fmt.Errorf("HID path %q is not currently available for semantic capture; connect an MX Master 4 or rerun with --raw", explicitPath)
 	}
 
 	switch candidates := collapseSupportedEventCandidates(supportedSemanticEventCandidates(devices, adapter)); len(candidates) {

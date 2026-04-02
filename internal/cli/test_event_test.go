@@ -275,6 +275,20 @@ func TestTestEventDeviceCmdSemanticModeRejectsUnsupportedExplicitPath(t *testing
 	}
 }
 
+func TestResolveSemanticEventDevicePathRejectsMissingExplicitPath(t *testing.T) {
+	_, err := resolveSemanticEventDevicePath(hidapi.FakeClient{
+		Devices: []hidapi.DeviceInfo{
+			{Path: "mx-master-4", VendorID: 0x046d, ProductID: 0xb042, Product: "MX Master 4"},
+		},
+	}, "stale-path")
+	if err == nil {
+		t.Fatal("resolveSemanticEventDevicePath() returned nil, want missing-path error")
+	}
+	if !strings.Contains(err.Error(), "not currently available") {
+		t.Fatalf("resolveSemanticEventDevicePath() error = %v, want not-currently-available guidance", err)
+	}
+}
+
 func TestStreamSemanticEventsWritesUnsupportedReportVisibility(t *testing.T) {
 	buf := new(bytes.Buffer)
 
