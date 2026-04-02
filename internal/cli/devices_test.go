@@ -1,0 +1,100 @@
+package cli
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+
+	"github.com/realtong/logi-cli/internal/hidapi"
+)
+
+func TestDevicesListPrintsKnownFields(t *testing.T) {
+	cmd := newRootCmd(hidapi.FakeClient{
+		Devices: []hidapi.DeviceInfo{
+			{
+				Path:            "IOService:/AppleACPIPlatformExpert/PCI0@0",
+				VendorID:        0x046d,
+				ProductID:       0xc548,
+				ReleaseNumber:   0x0111,
+				InterfaceNumber: 1,
+				UsagePage:       0x0001,
+				Usage:           0x0002,
+				SerialNumber:    "ABC123",
+				Manufacturer:    "Logitech",
+				Product:         "MX Master 3",
+				Transport:       "USB",
+			},
+		},
+	})
+
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"devices", "list"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	out := buf.String()
+	for _, want := range []string{
+		"Path: IOService:/AppleACPIPlatformExpert/PCI0@0",
+		"VID:PID: 046d:c548",
+		"Release: 0111",
+		"Interface: 1",
+		"Usage Page: 0001",
+		"Usage: 0002",
+		"Transport: USB",
+		"Manufacturer: Logitech",
+		"Product: MX Master 3",
+		"Serial: ABC123",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestDevicesInspectPrintsMatchingDevice(t *testing.T) {
+	cmd := newRootCmd(hidapi.FakeClient{
+		Devices: []hidapi.DeviceInfo{
+			{Path: "first", Product: "Ignored"},
+			{
+				Path:            "second",
+				VendorID:        0x046d,
+				ProductID:       0xb023,
+				Manufacturer:    "Logitech",
+				Product:         "MX Keys",
+				SerialNumber:    "XYZ789",
+				Transport:       "Bluetooth",
+				InterfaceNumber: 2,
+			},
+		},
+	})
+
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"devices", "inspect", "second"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	out := buf.String()
+	for _, want := range []string{
+		"Path: second",
+		"VID:PID: 046d:b023",
+		"Product: MX Keys",
+		"Manufacturer: Logitech",
+		"Serial: XYZ789",
+		"Transport: Bluetooth",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "Path: first") {
+		t.Fatalf("inspect output included non-matching device:\n%s", out)
+	}
+}
