@@ -24,6 +24,7 @@ func newRootCmdWithDaemon(hidClient hidapi.Client, daemonApp *daemon.App) *cobra
 
 	cmd.CompletionOptions.DisableDefaultCmd = true
 	cmd.AddCommand(newDaemonCmd(daemonApp))
+	cmd.AddCommand(defaultDoctorCmd(daemonApp))
 	cmd.AddCommand(newDevicesCmd(hidClient))
 	cmd.AddCommand(newInitCmd())
 	cmd.AddCommand(newReloadCmd(daemonApp))
