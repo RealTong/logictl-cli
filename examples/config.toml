@@ -4,7 +4,7 @@ reload_on_change = true
 [[devices]]
 id = "mx-master-4"
 match_vendor_id = 1133
-match_product_id = 1234
+match_product_id = 45122
 
   [devices.capabilities]
   thumb_button = "button_5"
@@ -15,6 +15,24 @@ match_product_id = 1234
 id = "close_tab"
 type = "shortcut"
 keys = ["cmd", "w"]
+
+[[actions]]
+id = "mission_control"
+type = "system"
+system = "mission_control"
+
+[[actions]]
+id = "custom_script"
+type = "script"
+script = "~/.config/logi-cli/scripts/custom.sh"
+
+[[profiles]]
+id = "global"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "thumb_button_down"
+  action = "mission_control"
 
 [[profiles]]
 id = "chrome"

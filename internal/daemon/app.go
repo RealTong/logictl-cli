@@ -5,10 +5,12 @@ import (
 
 	"github.com/realtong/logi-cli/internal/actions"
 	appcore "github.com/realtong/logi-cli/internal/app"
+	"github.com/realtong/logi-cli/internal/config"
 	"github.com/realtong/logi-cli/internal/events"
 	"github.com/realtong/logi-cli/internal/hidapi"
 	"github.com/realtong/logi-cli/internal/ipc"
 	platformmacos "github.com/realtong/logi-cli/internal/platform/macos"
+	"github.com/realtong/logi-cli/internal/rules"
 )
 
 type App struct {
@@ -32,6 +34,18 @@ func NewApp(paths appcore.Paths) *App {
 			ConfigPath: paths.ConfigFile,
 		}),
 	}
+}
+
+func NewFromConfig(cfg *config.Config) (*Runtime, error) {
+	runtime := NewRuntimeWithDependencies(RuntimeDependencies{
+		BuildMatcher: func(cfg *config.Config) (ruleMatcher, error) {
+			return rules.NewEngine(cfg), nil
+		},
+	})
+	if err := runtime.ApplyConfig(cfg); err != nil {
+		return nil, err
+	}
+	return runtime, nil
 }
 
 func (a *App) Run(ctx context.Context) error {
