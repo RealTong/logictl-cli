@@ -3,6 +3,7 @@ package cli
 import (
 	appcore "github.com/realtong/logi-cli/internal/app"
 	"github.com/realtong/logi-cli/internal/daemon"
+	"github.com/realtong/logi-cli/internal/events"
 	"github.com/realtong/logi-cli/internal/hidapi"
 	"github.com/spf13/cobra"
 )
@@ -26,6 +27,9 @@ func newRootCmdWithDaemon(hidClient hidapi.Client, daemonApp *daemon.App) *cobra
 	cmd.AddCommand(newDevicesCmd(hidClient))
 	cmd.AddCommand(newInitCmd())
 	cmd.AddCommand(newReloadCmd(daemonApp))
+	cmd.AddCommand(newTestCmd(hidClient, func(path string) rawSource {
+		return events.NewHIDSource(path)
+	}))
 	cmd.AddCommand(newValidateCmd())
 	cmd.AddCommand(newVersionCmd())
 	return cmd
