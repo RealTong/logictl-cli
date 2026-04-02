@@ -89,7 +89,7 @@ func resolveEventDevicePath(hidClient hidapi.Client, explicitPath string) (strin
 		return "", err
 	}
 
-	switch candidates := supportedEventCandidates(devices); len(candidates) {
+	switch candidates := collapseSupportedEventCandidates(supportedEventCandidates(devices)); len(candidates) {
 	case 0:
 		if len(devices) == 0 {
 			return "", errors.New("no HID devices available")
@@ -114,6 +114,27 @@ func supportedEventCandidates(devices []hidapi.DeviceInfo) []hidapi.DeviceInfo {
 		candidates = append(candidates, device)
 	}
 	return candidates
+}
+
+func collapseSupportedEventCandidates(devices []hidapi.DeviceInfo) []hidapi.DeviceInfo {
+	collapsed := make([]hidapi.DeviceInfo, 0, len(devices))
+	seen := make(map[string]struct{}, len(devices))
+	for _, device := range devices {
+		key := supportedEventCandidateKey(device)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		collapsed = append(collapsed, device)
+	}
+	return collapsed
+}
+
+func supportedEventCandidateKey(device hidapi.DeviceInfo) string {
+	if device.SerialNumber != "" {
+		return fmt.Sprintf("serial:%04x:%04x:%s", device.VendorID, device.ProductID, device.SerialNumber)
+	}
+	return fmt.Sprintf("path:%s", device.Path)
 }
 
 func isSupportedEventCandidate(device hidapi.DeviceInfo) bool {

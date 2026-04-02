@@ -115,3 +115,36 @@ func TestResolveEventDevicePathRejectsUnsupportedLogitechDevice(t *testing.T) {
 		t.Fatalf("resolveEventDevicePath() error = %v, want --path guidance", err)
 	}
 }
+
+func TestResolveEventDevicePathCollapsesSupportedInterfacesForSamePhysicalDevice(t *testing.T) {
+	got, err := resolveEventDevicePath(hidapi.FakeClient{
+		Devices: []hidapi.DeviceInfo{
+			{
+				Path:            "mx-master-4-iface-1",
+				VendorID:        0x046d,
+				ProductID:       0xc548,
+				Product:         "MX Master 4",
+				Manufacturer:    "Logitech",
+				Transport:       "Bluetooth",
+				SerialNumber:    "ABC123",
+				InterfaceNumber: 1,
+			},
+			{
+				Path:            "mx-master-4-iface-2",
+				VendorID:        0x046d,
+				ProductID:       0xc548,
+				Product:         "MX Master 4",
+				Manufacturer:    "Logitech",
+				Transport:       "Bluetooth",
+				SerialNumber:    "ABC123",
+				InterfaceNumber: 2,
+			},
+		},
+	}, "")
+	if err != nil {
+		t.Fatalf("resolveEventDevicePath() returned error: %v", err)
+	}
+	if got != "mx-master-4-iface-1" {
+		t.Fatalf("resolveEventDevicePath() = %q, want %q", got, "mx-master-4-iface-1")
+	}
+}
