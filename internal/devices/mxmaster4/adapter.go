@@ -10,7 +10,8 @@ import (
 const productID = 0xb042
 
 type Adapter struct {
-	thumbButtonHeld bool
+	thumbButtonHeld  bool
+	thumbButtonMoved bool
 }
 
 func (Adapter) Matches(info hidapi.DeviceInfo) bool {
@@ -32,9 +33,11 @@ func (a *Adapter) Decode(report events.RawReport) (events.DeviceEvent, error) {
 	if state == thumbButtonPressed {
 		if !a.thumbButtonHeld {
 			a.thumbButtonHeld = true
+			a.thumbButtonMoved = false
 			return buttonEvent(report, events.ButtonDown), nil
 		}
 		if deltaX != 0 || deltaY != 0 {
+			a.thumbButtonMoved = true
 			return pointerMoveEvent(report, deltaX, deltaY), nil
 		}
 		return events.DeviceEvent{}, nil
@@ -42,6 +45,11 @@ func (a *Adapter) Decode(report events.RawReport) (events.DeviceEvent, error) {
 
 	if a.thumbButtonHeld {
 		a.thumbButtonHeld = false
+		moved := a.thumbButtonMoved
+		a.thumbButtonMoved = false
+		if !moved && state == 0x00 && deltaX == 0 && deltaY == 0 {
+			return buttonEvent(report, events.ButtonUp), nil
+		}
 	}
 
 	if state == 0x00 && deltaX == 0 && deltaY == 0 {

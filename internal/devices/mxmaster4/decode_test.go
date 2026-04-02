@@ -28,6 +28,39 @@ func TestDecodeThumbButtonDownFixture(t *testing.T) {
 	}
 }
 
+func TestAdapterDecodeThumbButtonDownFixtureEmitsThumbButtonUpOnStableIdle(t *testing.T) {
+	reports := mustLoadFixtureReports(t, "thumb-button-down.txt")
+	adapter := Adapter{}
+
+	var releaseCount int
+	var releaseAt time.Time
+
+	for index, report := range reports {
+		event, err := adapter.Decode(report)
+		if err != nil {
+			if errors.Is(err, ErrUnsupportedReport) {
+				continue
+			}
+			t.Fatalf("Decode returned error: %v", err)
+		}
+		if event.Kind != events.ButtonUp || event.Control != "thumb_button" {
+			continue
+		}
+		releaseCount++
+		releaseAt = event.At
+		if index != 1 {
+			t.Fatalf("Decode() emitted thumb_button up at report %d, want stable idle report 1", index)
+		}
+	}
+
+	if releaseCount != 1 {
+		t.Fatalf("releaseCount = %d, want 1", releaseCount)
+	}
+	if !releaseAt.Equal(reports[1].At) {
+		t.Fatalf("releaseAt = %v, want %v", releaseAt, reports[1].At)
+	}
+}
+
 func TestAdapterDecodeHoldMoveDownFixture(t *testing.T) {
 	reports := mustLoadFixtureReports(t, "thumb-button-hold-move-down.txt")
 
