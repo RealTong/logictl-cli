@@ -8,6 +8,7 @@ func NewRootCmd() *cobra.Command {
 		Short: "Configure Logitech device behavior on macOS",
 	}
 
+	cmd.CompletionOptions.DisableDefaultCmd = true
 	cmd.AddCommand(newVersionCmd())
 	return cmd
 }
