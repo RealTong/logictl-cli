@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/realtong/logi-cli/internal/devices/mxmaster4"
 	"github.com/realtong/logi-cli/internal/events"
@@ -11,6 +12,11 @@ import (
 )
 
 const mxMaster4DeviceID = "mx-master-4"
+const (
+	usagePageGenericDesktop = 0x0001
+	usageGenericDesktop     = 0x0001
+	usageMouse              = 0x0002
+)
 
 type rawSourceFactory func(path string) events.Source
 
@@ -24,6 +30,11 @@ func newMXMaster4EventSource(hidClient hidapi.Client, openRaw rawSourceFactory) 
 		hidClient: hidClient,
 		openRaw:   openRaw,
 	}
+}
+
+func (s mxMaster4EventSource) Validate() error {
+	_, err := s.resolvePath()
+	return err
 }
 
 func (s mxMaster4EventSource) Stream(ctx context.Context) (<-chan events.DeviceEvent, <-chan error) {
@@ -96,12 +107,62 @@ func (s mxMaster4EventSource) resolvePath() (string, error) {
 	}
 
 	adapter := mxmaster4.Adapter{}
+	groups := make(map[string][]hidapi.DeviceInfo)
 	for _, device := range devices {
 		if !adapter.Matches(device) || device.Path == "" {
 			continue
 		}
-		return device.Path, nil
+		groups[device.Path] = append(groups[device.Path], device)
 	}
 
-	return "", fmt.Errorf("no supported MX Master 4 HID device available")
+	if len(groups) == 0 {
+		return "", fmt.Errorf("no supported MX Master 4 HID device available")
+	}
+
+	var safePaths []string
+	var unsafePaths []string
+	for path, group := range groups {
+		switch {
+		case groupHasPrimaryPointerUsage(group):
+			unsafePaths = append(unsafePaths, path)
+		case groupHasVendorSpecificUsage(group):
+			safePaths = append(safePaths, path)
+		}
+	}
+
+	sort.Strings(safePaths)
+	sort.Strings(unsafePaths)
+
+	switch len(safePaths) {
+	case 1:
+		return safePaths[0], nil
+	case 0:
+		if len(unsafePaths) > 0 {
+			return "", fmt.Errorf("unsafe MX Master 4 HID path layout: refusing to open primary pointer path(s) %v because macOS/BLE would seize the mouse", unsafePaths)
+		}
+		return "", fmt.Errorf("no safe MX Master 4 vendor-specific HID path available")
+	default:
+		return "", fmt.Errorf("multiple safe MX Master 4 HID paths found: %v", safePaths)
+	}
+}
+
+func groupHasPrimaryPointerUsage(group []hidapi.DeviceInfo) bool {
+	for _, device := range group {
+		if device.UsagePage != usagePageGenericDesktop {
+			continue
+		}
+		if device.Usage == usageGenericDesktop || device.Usage == usageMouse {
+			return true
+		}
+	}
+	return false
+}
+
+func groupHasVendorSpecificUsage(group []hidapi.DeviceInfo) bool {
+	for _, device := range group {
+		if device.UsagePage >= 0xff00 {
+			return true
+		}
+	}
+	return false
 }

@@ -36,6 +36,13 @@ func NewApp(paths appcore.Paths) *App {
 	}
 }
 
+func NewAppWithRuntime(paths appcore.Paths, runtime *Runtime) *App {
+	return &App{
+		paths:   paths,
+		runtime: runtime,
+	}
+}
+
 func NewFromConfig(cfg *config.Config) (*Runtime, error) {
 	runtime := NewRuntimeWithDependencies(RuntimeDependencies{
 		BuildMatcher: func(cfg *config.Config) (ruleMatcher, error) {
@@ -72,6 +79,10 @@ func (a *App) Run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (a *App) Preflight() error {
+	return a.runtime.Initialize()
 }
 
 func (a *App) Status() (ipc.Status, error) {

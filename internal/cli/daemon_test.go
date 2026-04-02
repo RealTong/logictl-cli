@@ -3,10 +3,17 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"testing"
-
-	"github.com/realtong/logi-cli/internal/daemon"
 )
+
+type fakeDaemonPreflight struct {
+	err error
+}
+
+func (f fakeDaemonPreflight) Preflight() error {
+	return f.err
+}
 
 type fakeDaemonServiceManager struct {
 	calls []string
@@ -29,11 +36,10 @@ func (m *fakeDaemonServiceManager) Restart(context.Context) error {
 
 func TestDaemonStartCmdInvokesServiceManager(t *testing.T) {
 	manager := &fakeDaemonServiceManager{}
-	cmd := newDaemonCmdWithServiceManager(daemon.NewApp(testPaths(t)), manager)
+	cmd := newDaemonStartCmd(fakeDaemonPreflight{}, manager)
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)
-	cmd.SetArgs([]string{"start"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Execute returned error: %v", err)
@@ -45,16 +51,31 @@ func TestDaemonStartCmdInvokesServiceManager(t *testing.T) {
 
 func TestDaemonRestartCmdInvokesServiceManager(t *testing.T) {
 	manager := &fakeDaemonServiceManager{}
-	cmd := newDaemonCmdWithServiceManager(daemon.NewApp(testPaths(t)), manager)
+	cmd := newDaemonRestartCmd(fakeDaemonPreflight{}, manager)
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)
-	cmd.SetArgs([]string{"restart"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Execute returned error: %v", err)
 	}
 	if len(manager.calls) != 1 || manager.calls[0] != "restart" {
 		t.Fatalf("manager.calls = %#v, want [restart]", manager.calls)
+	}
+}
+
+func TestDaemonStartCmdRejectsPreflightFailures(t *testing.T) {
+	manager := &fakeDaemonServiceManager{}
+	cmd := newDaemonStartCmd(fakeDaemonPreflight{err: errors.New("unsafe path")}, manager)
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil, want preflight error")
+	}
+	if len(manager.calls) != 0 {
+		t.Fatalf("manager.calls = %#v, want no service-manager calls on preflight failure", manager.calls)
 	}
 }

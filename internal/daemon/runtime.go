@@ -16,6 +16,10 @@ type eventSource interface {
 	Stream(context.Context) (<-chan events.DeviceEvent, <-chan error)
 }
 
+type validatingEventSource interface {
+	Validate() error
+}
+
 type appResolver interface {
 	ActiveBundleID(context.Context) (string, error)
 }
@@ -118,6 +122,12 @@ func (r *Runtime) ApplyConfig(cfg *config.Config) error {
 }
 
 func (r *Runtime) Initialize() error {
+	if source, ok := r.source.(validatingEventSource); ok {
+		if err := source.Validate(); err != nil {
+			return err
+		}
+	}
+
 	if r.configPath == "" {
 		return nil
 	}
