@@ -16,6 +16,10 @@ type daemonServiceManager interface {
 	Restart(context.Context) error
 }
 
+type daemonPreflighter interface {
+	Preflight() error
+}
+
 type launchAgentServiceManager struct {
 	paths      appcore.Paths
 	executable func() (string, error)
@@ -35,10 +39,10 @@ func newDaemonCmdWithServiceManager(app *daemon.App, manager daemonServiceManage
 	}
 
 	cmd.AddCommand(newDaemonRunCmd(app))
-	cmd.AddCommand(newDaemonStartCmd(manager))
+	cmd.AddCommand(newDaemonStartCmd(app, manager))
 	cmd.AddCommand(newDaemonStatusCmd(app))
 	cmd.AddCommand(newDaemonStopCmd(manager))
-	cmd.AddCommand(newDaemonRestartCmd(manager))
+	cmd.AddCommand(newDaemonRestartCmd(app, manager))
 	return cmd
 }
 
@@ -79,12 +83,15 @@ func newDaemonStatusCmd(app *daemon.App) *cobra.Command {
 	}
 }
 
-func newDaemonStartCmd(manager daemonServiceManager) *cobra.Command {
+func newDaemonStartCmd(app daemonPreflighter, manager daemonServiceManager) *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
 		Short: "Install and start the LaunchAgent-managed daemon",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := app.Preflight(); err != nil {
+				return err
+			}
 			if err := manager.Start(cmd.Context()); err != nil {
 				return err
 			}
@@ -109,12 +116,15 @@ func newDaemonStopCmd(manager daemonServiceManager) *cobra.Command {
 	}
 }
 
-func newDaemonRestartCmd(manager daemonServiceManager) *cobra.Command {
+func newDaemonRestartCmd(app daemonPreflighter, manager daemonServiceManager) *cobra.Command {
 	return &cobra.Command{
 		Use:   "restart",
 		Short: "Restart the LaunchAgent-managed daemon",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := app.Preflight(); err != nil {
+				return err
+			}
 			if err := manager.Restart(cmd.Context()); err != nil {
 				return err
 			}

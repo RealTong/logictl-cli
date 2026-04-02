@@ -38,7 +38,7 @@ func TestNewRootCmdHelpHidesCompletion(t *testing.T) {
 }
 
 func TestDaemonStatusCmdReportsRunningDaemon(t *testing.T) {
-	daemonApp := daemon.NewApp(testPaths(t))
+	daemonApp := daemon.NewAppWithRuntime(testPaths(t), daemon.NewRuntime())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -65,7 +65,7 @@ func TestDaemonStatusCmdReportsRunningDaemon(t *testing.T) {
 }
 
 func TestDaemonStatusCmdReportsStoppedWhenSocketMissing(t *testing.T) {
-	daemonApp := daemon.NewApp(testPaths(t))
+	daemonApp := daemon.NewAppWithRuntime(testPaths(t), daemon.NewRuntime())
 
 	cmd := newRootCmdWithDaemon(hidapi.FakeClient{}, daemonApp)
 	buf := &bytes.Buffer{}
@@ -84,7 +84,7 @@ func TestDaemonStatusCmdReportsStoppedWhenSocketMissing(t *testing.T) {
 }
 
 func TestReloadCmdRequestsReload(t *testing.T) {
-	daemonApp := daemon.NewApp(testPaths(t))
+	daemonApp := daemon.NewAppWithRuntime(testPaths(t), daemon.NewRuntime())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
