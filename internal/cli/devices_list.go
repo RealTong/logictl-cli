@@ -37,7 +37,12 @@ func newDevicesListCmd(client hidapi.Client) *cobra.Command {
 }
 
 func printDeviceSummary(cmd *cobra.Command, device hidapi.DeviceInfo) {
-	fmt.Fprintf(cmd.OutOrStdout(), "%04x:%04x %s [%s]\n", device.VendorID, device.ProductID, device.Product, device.Path)
+	if device.Path == "" {
+		fmt.Fprintf(cmd.OutOrStdout(), "%04x:%04x %s\n", device.VendorID, device.ProductID, device.Product)
+		return
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "%04x:%04x %s %s\n", device.VendorID, device.ProductID, device.Product, device.Path)
 }
 
 func printDevice(cmd *cobra.Command, device hidapi.DeviceInfo) {

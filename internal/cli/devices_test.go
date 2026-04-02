@@ -42,11 +42,11 @@ func TestDevicesListPrintsSummaryLines(t *testing.T) {
 	}
 
 	out := buf.String()
-	want := "046d:c548 MX Master 3 [IOService:/AppleACPIPlatformExpert/PCI0@0]\n046d:b023 MX Keys []\n"
+	want := "046d:c548 MX Master 3 IOService:/AppleACPIPlatformExpert/PCI0@0\n046d:b023 MX Keys\n"
 	if out != want {
 		t.Fatalf("output = %q, want %q", out, want)
 	}
-	for _, unwanted := range []string{"Path:", "Release:", "Transport:", "Serial:"} {
+	for _, unwanted := range []string{"Path:", "Release:", "Transport:", "Serial:", "[", "]"} {
 		if strings.Contains(out, unwanted) {
 			t.Fatalf("output unexpectedly included %q:\n%s", unwanted, out)
 		}
