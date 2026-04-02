@@ -45,5 +45,13 @@ func (a *Adapter) Decode(report events.RawReport) (events.DeviceEvent, error) {
 		return buttonEvent(report, events.ButtonUp), nil
 	}
 
-	return events.DeviceEvent{}, nil
+	if state == 0x00 && deltaX == 0 && deltaY == 0 {
+		return events.DeviceEvent{}, nil
+	}
+
+	if state == 0x00 && (deltaX != 0 || deltaY != 0) {
+		return events.DeviceEvent{}, unsupportedReportError(state)
+	}
+
+	return events.DeviceEvent{}, unsupportedReportError(state)
 }

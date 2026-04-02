@@ -58,17 +58,25 @@ func newTestEventDeviceCmd(hidClient hidapi.Client, openSource rawSourceFactory)
 		Short: "Print live device events",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			resolvedPath, err := resolveEventDevicePath(hidClient, path)
+			if raw {
+				resolvedPath, err := resolveEventDevicePath(hidClient, path)
+				if err != nil {
+					return err
+				}
+
+				ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt)
+				defer stop()
+
+				return streamRawReports(ctx, openSource(resolvedPath), cmd.OutOrStdout(), output)
+			}
+
+			resolvedPath, err := resolveSemanticEventDevicePath(hidClient, path)
 			if err != nil {
 				return err
 			}
 
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt)
 			defer stop()
-
-			if raw {
-				return streamRawReports(ctx, openSource(resolvedPath), cmd.OutOrStdout(), output)
-			}
 
 			return streamSemanticEvents(ctx, openSource(resolvedPath), cmd.OutOrStdout(), output)
 		},
@@ -101,7 +109,13 @@ func streamSemanticEvents(ctx context.Context, source rawSource, out io.Writer, 
 
 			event, err := adapter.Decode(report)
 			if err != nil {
-				continue
+				if errors.Is(err, mxmaster4.ErrUnsupportedReport) {
+					if _, writeErr := fmt.Fprintln(writer, formatUnsupportedSemanticReport(report, err)); writeErr != nil {
+						return writeErr
+					}
+					continue
+				}
+				return err
 			}
 			if event.Kind == "" && event.Gesture == "" && event.Control == "" {
 				continue
@@ -126,6 +140,10 @@ func streamSemanticEvents(ctx context.Context, source rawSource, out io.Writer, 
 	}
 
 	return nil
+}
+
+func formatUnsupportedSemanticReport(report events.RawReport, err error) string {
+	return fmt.Sprintf("unsupported_report %s (%v)", events.FormatRawReport(report), err)
 }
 
 func newEventWriter(out io.Writer, outputPath string) (io.Writer, func(), error) {
@@ -208,10 +226,57 @@ func resolveEventDevicePath(hidClient hidapi.Client, explicitPath string) (strin
 	}
 }
 
+func resolveSemanticEventDevicePath(hidClient hidapi.Client, explicitPath string) (string, error) {
+	devices, err := hidClient.ListDevices()
+	if err != nil {
+		return "", err
+	}
+
+	adapter := mxmaster4.Adapter{}
+	if explicitPath != "" {
+		for _, device := range devices {
+			if device.Path != explicitPath {
+				continue
+			}
+			if !adapter.Matches(device) {
+				return "", fmt.Errorf("unsupported semantic capture for HID path %q: only MX Master 4 is supported; rerun with --raw", explicitPath)
+			}
+			return explicitPath, nil
+		}
+		return explicitPath, nil
+	}
+
+	switch candidates := collapseSupportedEventCandidates(supportedSemanticEventCandidates(devices, adapter)); len(candidates) {
+	case 0:
+		if len(devices) == 0 {
+			return "", errors.New("no HID devices available")
+		}
+		return "", errors.New("no supported MX Master 4 HID devices available; rerun with --raw or --path")
+	case 1:
+		if candidates[0].Path == "" {
+			return "", errors.New("selected HID device is missing a path")
+		}
+		return candidates[0].Path, nil
+	default:
+		return "", errors.New("multiple supported MX Master 4 HID devices found; rerun with --path")
+	}
+}
+
 func supportedEventCandidates(devices []hidapi.DeviceInfo) []hidapi.DeviceInfo {
 	candidates := make([]hidapi.DeviceInfo, 0, len(devices))
 	for _, device := range devices {
 		if !isSupportedEventCandidate(device) {
+			continue
+		}
+		candidates = append(candidates, device)
+	}
+	return candidates
+}
+
+func supportedSemanticEventCandidates(devices []hidapi.DeviceInfo, adapter mxmaster4.Adapter) []hidapi.DeviceInfo {
+	candidates := make([]hidapi.DeviceInfo, 0, len(devices))
+	for _, device := range devices {
+		if !adapter.Matches(device) {
 			continue
 		}
 		candidates = append(candidates, device)

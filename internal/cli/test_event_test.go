@@ -225,3 +225,89 @@ func TestTestEventDeviceCmdRawFlagPreservesRawOutput(t *testing.T) {
 		t.Fatalf("output = %q, want raw output when --raw is set", got)
 	}
 }
+
+func TestTestEventDeviceCmdSemanticModeRejectsUnsupportedAutoSelectedDevice(t *testing.T) {
+	cmd := newTestEventDeviceCmd(
+		hidapi.FakeClient{
+			Devices: []hidapi.DeviceInfo{
+				{Path: "mx-master-3", VendorID: 0x046d, ProductID: 0xb023, Product: "MX Master 3"},
+			},
+		},
+		func(path string) rawSource {
+			t.Fatalf("openSource called for unsupported semantic device %q", path)
+			return fakeSource{}
+		},
+	)
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil, want semantic-device error")
+	}
+	if !strings.Contains(err.Error(), "MX Master 4") {
+		t.Fatalf("Execute error = %v, want MX Master 4 guidance", err)
+	}
+}
+
+func TestTestEventDeviceCmdSemanticModeRejectsUnsupportedExplicitPath(t *testing.T) {
+	cmd := newTestEventDeviceCmd(
+		hidapi.FakeClient{
+			Devices: []hidapi.DeviceInfo{
+				{Path: "mx-master-3", VendorID: 0x046d, ProductID: 0xb023, Product: "MX Master 3"},
+			},
+		},
+		func(path string) rawSource {
+			t.Fatalf("openSource called for unsupported semantic device %q", path)
+			return fakeSource{}
+		},
+	)
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	cmd.SetArgs([]string{"--path", "mx-master-3"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil, want unsupported explicit-path error")
+	}
+	if !strings.Contains(err.Error(), "unsupported semantic capture") {
+		t.Fatalf("Execute error = %v, want unsupported semantic capture error", err)
+	}
+}
+
+func TestStreamSemanticEventsWritesUnsupportedReportVisibility(t *testing.T) {
+	buf := new(bytes.Buffer)
+
+	err := streamSemanticEvents(context.Background(), fakeSource{
+		events: []RawReport{
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		},
+	}, buf, "")
+	if err != nil {
+		t.Fatalf("streamSemanticEvents() returned error: %v", err)
+	}
+
+	got := buf.String()
+	if !strings.Contains(got, "unsupported_report") {
+		t.Fatalf("output = %q, want unsupported_report visibility", got)
+	}
+	if !strings.Contains(got, "02 20 00 00 00 00 00 00") {
+		t.Fatalf("output = %q, want raw bytes for unsupported report", got)
+	}
+}
+
+func TestStreamSemanticEventsReturnsDecodeErrors(t *testing.T) {
+	buf := new(bytes.Buffer)
+
+	err := streamSemanticEvents(context.Background(), fakeSource{
+		events: []RawReport{
+			{DeviceID: "mx-master-4", Bytes: []byte{0x01, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		},
+	}, buf, "")
+	if err == nil {
+		t.Fatal("streamSemanticEvents() returned nil, want decode error")
+	}
+	if !strings.Contains(err.Error(), "unsupported report id") {
+		t.Fatalf("streamSemanticEvents() error = %v, want decode error details", err)
+	}
+}

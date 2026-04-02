@@ -1,6 +1,7 @@
 package mxmaster4
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -38,6 +39,9 @@ func TestAdapterDecodeHoldMoveDownFixture(t *testing.T) {
 	for _, report := range reports {
 		event, err := adapter.Decode(report)
 		if err != nil {
+			if errors.Is(err, ErrUnsupportedReport) {
+				continue
+			}
 			t.Fatalf("Decode returned error: %v", err)
 		}
 		if event.Kind == events.ButtonDown && event.Control == "thumb_button" {
@@ -53,6 +57,18 @@ func TestAdapterDecodeHoldMoveDownFixture(t *testing.T) {
 	}
 	if maxDeltaY <= 0 {
 		t.Fatalf("decoded stream max DeltaY = %d, want positive downward motion", maxDeltaY)
+	}
+}
+
+func TestAdapterDecodeRejectsUnsupportedState(t *testing.T) {
+	adapter := Adapter{}
+
+	_, err := adapter.Decode(events.RawReport{
+		DeviceID: "mx-master-4",
+		Bytes:    []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+	})
+	if !errors.Is(err, ErrUnsupportedReport) {
+		t.Fatalf("Decode() error = %v, want ErrUnsupportedReport", err)
 	}
 }
 

@@ -1,6 +1,7 @@
 package events_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -45,6 +46,9 @@ func mustDecodeFixtureStream(t *testing.T, reports []events.RawReport) []events.
 	for _, report := range reports {
 		event, err := adapter.Decode(report)
 		if err != nil {
+			if errors.Is(err, mxmaster4.ErrUnsupportedReport) {
+				continue
+			}
 			t.Fatalf("Decode returned error: %v", err)
 		}
 		if event.Kind == "" && event.Gesture == "" && event.Control == "" {

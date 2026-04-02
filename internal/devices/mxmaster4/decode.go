@@ -2,6 +2,7 @@ package mxmaster4
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/realtong/logi-cli/internal/events"
@@ -12,13 +13,15 @@ const (
 	thumbButtonPressed = 0x40
 )
 
+var ErrUnsupportedReport = errors.New("unsupported mx master 4 report")
+
 func Decode(report events.RawReport) (events.DeviceEvent, error) {
 	state, deltaX, deltaY, err := decodeReport(report)
 	if err != nil {
 		return events.DeviceEvent{}, err
 	}
 	if state != thumbButtonPressed {
-		return events.DeviceEvent{}, nil
+		return events.DeviceEvent{}, unsupportedReportError(state)
 	}
 	if deltaX == 0 && deltaY == 0 {
 		return buttonEvent(report, events.ButtonDown), nil
@@ -58,4 +61,8 @@ func pointerMoveEvent(report events.RawReport, deltaX, deltaY int) events.Device
 		DeltaX:   deltaX,
 		DeltaY:   deltaY,
 	}
+}
+
+func unsupportedReportError(state byte) error {
+	return fmt.Errorf("%w: state=0x%02x", ErrUnsupportedReport, state)
 }
