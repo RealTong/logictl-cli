@@ -8,6 +8,7 @@ import (
 )
 
 const productID = 0xb042
+const postReleaseState = 0x20
 
 type Adapter struct {
 	thumbButtonHeld  bool
@@ -47,18 +48,22 @@ func (a *Adapter) Decode(report events.RawReport) (events.DeviceEvent, error) {
 		a.thumbButtonHeld = false
 		moved := a.thumbButtonMoved
 		a.thumbButtonMoved = false
-		if !moved && state == 0x00 && deltaX == 0 && deltaY == 0 {
+		if !moved && isIdleState(state, deltaX, deltaY) {
 			return buttonEvent(report, events.ButtonUp), nil
 		}
 	}
 
-	if state == 0x00 && deltaX == 0 && deltaY == 0 {
+	if isIgnoredState(state) {
 		return events.DeviceEvent{}, nil
 	}
 
-	if state == 0x00 && (deltaX != 0 || deltaY != 0) {
-		return events.DeviceEvent{}, unsupportedReportError(state)
-	}
-
 	return events.DeviceEvent{}, unsupportedReportError(state)
+}
+
+func isIdleState(state byte, deltaX, deltaY int) bool {
+	return isIgnoredState(state) && deltaX == 0 && deltaY == 0
+}
+
+func isIgnoredState(state byte) bool {
+	return state == 0x00 || state == 0x01 || state == postReleaseState
 }

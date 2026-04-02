@@ -97,6 +97,7 @@ func streamSemanticEvents(ctx context.Context, source rawSource, out io.Writer, 
 
 	adapter := mxmaster4.Adapter{}
 	normalizer := events.NewNormalizer(events.NormalizeConfig{})
+	reportedWarnings := map[string]struct{}{}
 
 	reports, errs := source.Stream(ctx)
 	for reports != nil || errs != nil {
@@ -110,12 +111,15 @@ func streamSemanticEvents(ctx context.Context, source rawSource, out io.Writer, 
 			event, err := adapter.Decode(report)
 			if err != nil {
 				if errors.Is(err, mxmaster4.ErrUnsupportedReport) {
-					if _, writeErr := fmt.Fprintln(writer, formatUnsupportedSemanticReport(report, err)); writeErr != nil {
+					if writeErr := writeWarningOnce(writer, reportedWarnings, semanticWarningKey("unsupported", err), formatUnsupportedSemanticReport(report, err)); writeErr != nil {
 						return writeErr
 					}
 					continue
 				}
-				return err
+				if writeErr := writeWarningOnce(writer, reportedWarnings, semanticWarningKey("ignored", err), formatIgnoredSemanticReport(report, err)); writeErr != nil {
+					return writeErr
+				}
+				continue
 			}
 			if event.Kind == "" && event.Gesture == "" && event.Control == "" {
 				continue
@@ -142,8 +146,25 @@ func streamSemanticEvents(ctx context.Context, source rawSource, out io.Writer, 
 	return nil
 }
 
+func writeWarningOnce(writer io.Writer, seen map[string]struct{}, key string, line string) error {
+	if _, ok := seen[key]; ok {
+		return nil
+	}
+	seen[key] = struct{}{}
+	_, err := fmt.Fprintln(writer, line)
+	return err
+}
+
+func semanticWarningKey(kind string, err error) string {
+	return fmt.Sprintf("%s:%s", kind, err.Error())
+}
+
 func formatUnsupportedSemanticReport(report events.RawReport, err error) string {
 	return fmt.Sprintf("unsupported_report %s (%v)", events.FormatRawReport(report), err)
+}
+
+func formatIgnoredSemanticReport(report events.RawReport, err error) string {
+	return fmt.Sprintf("ignored_report %s (%v)", events.FormatRawReport(report), err)
 }
 
 func newEventWriter(out io.Writer, outputPath string) (io.Writer, func(), error) {

@@ -6,8 +6,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/realtong/logi-cli/internal/hidapi"
 )
@@ -294,7 +296,7 @@ func TestStreamSemanticEventsWritesUnsupportedReportVisibility(t *testing.T) {
 
 	err := streamSemanticEvents(context.Background(), fakeSource{
 		events: []RawReport{
-			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 		},
 	}, buf, "")
 	if err != nil {
@@ -305,23 +307,169 @@ func TestStreamSemanticEventsWritesUnsupportedReportVisibility(t *testing.T) {
 	if !strings.Contains(got, "unsupported_report") {
 		t.Fatalf("output = %q, want unsupported_report visibility", got)
 	}
-	if !strings.Contains(got, "02 20 00 00 00 00 00 00") {
+	if !strings.Contains(got, "02 10 00 00 00 00 00 00") {
 		t.Fatalf("output = %q, want raw bytes for unsupported report", got)
 	}
 }
 
-func TestStreamSemanticEventsReturnsDecodeErrors(t *testing.T) {
+func TestStreamSemanticEventsContinuesAfterDecodeError(t *testing.T) {
+	buf := new(bytes.Buffer)
+
+	err := streamSemanticEvents(context.Background(), fakeSource{
+		events: []RawReport{
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x01, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x20, 0x01, 0x00, 0x00}},
+		},
+	}, buf, "")
+	if err != nil {
+		t.Fatalf("streamSemanticEvents() returned error: %v", err)
+	}
+
+	got := buf.String()
+	if !strings.Contains(got, "thumb_button_down") {
+		t.Fatalf("output = %q, want thumb_button_down before decode error", got)
+	}
+	if !strings.Contains(got, "ignored_report") {
+		t.Fatalf("output = %q, want ignored_report visibility", got)
+	}
+	if !strings.Contains(got, "unsupported report id") {
+		t.Fatalf("output = %q, want decode error details", got)
+	}
+	if !strings.Contains(got, "hold(thumb_button)+move(down)") {
+		t.Fatalf("output = %q, want later semantic gesture after decode error", got)
+	}
+	if gotCount := strings.Count(got, "ignored_report"); gotCount != 1 {
+		t.Fatalf("output = %q, ignored_report count = %d, want 1", got, gotCount)
+	}
+}
+
+func TestStreamSemanticEventsSuppressesKnownReleaseTailNoise(t *testing.T) {
+	buf := new(bytes.Buffer)
+
+	err := streamSemanticEvents(context.Background(), fakeSource{
+		events: mustLoadFixtureReports(t, "thumb-button-hold-move-down.txt"),
+	}, buf, "")
+	if err != nil {
+		t.Fatalf("streamSemanticEvents() returned error: %v", err)
+	}
+
+	got := buf.String()
+	if !strings.Contains(got, "thumb_button_down") {
+		t.Fatalf("output = %q, want thumb_button_down", got)
+	}
+	if !strings.Contains(got, "thumb_button_hold") {
+		t.Fatalf("output = %q, want thumb_button_hold", got)
+	}
+	if !strings.Contains(got, "hold(thumb_button)+move(down)") {
+		t.Fatalf("output = %q, want hold(thumb_button)+move(down)", got)
+	}
+	if strings.Contains(got, "unsupported_report") {
+		t.Fatalf("output = %q, want known release-tail noise suppressed", got)
+	}
+	if strings.Contains(got, "ignored_report") {
+		t.Fatalf("output = %q, want no decode-error noise for known fixture", got)
+	}
+}
+
+func TestStreamSemanticEventsSkipsKnownNonThumbStates(t *testing.T) {
+	buf := new(bytes.Buffer)
+
+	err := streamSemanticEvents(context.Background(), fakeSource{
+		events: []RawReport{
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x01, 0x00, 0x00, 0xe0, 0xff, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		},
+	}, buf, "")
+	if err != nil {
+		t.Fatalf("streamSemanticEvents() returned error: %v", err)
+	}
+
+	got := buf.String()
+	if !strings.Contains(got, "thumb_button_down") {
+		t.Fatalf("output = %q, want thumb_button_down", got)
+	}
+	if !strings.Contains(got, "thumb_button_up") {
+		t.Fatalf("output = %q, want thumb_button_up", got)
+	}
+	if strings.Contains(got, "unsupported_report") {
+		t.Fatalf("output = %q, want known non-thumb states suppressed", got)
+	}
+	if strings.Contains(got, "ignored_report") {
+		t.Fatalf("output = %q, want known non-thumb states suppressed", got)
+	}
+}
+
+func TestStreamSemanticEventsDeduplicatesRepeatedDecodeErrors(t *testing.T) {
 	buf := new(bytes.Buffer)
 
 	err := streamSemanticEvents(context.Background(), fakeSource{
 		events: []RawReport{
 			{DeviceID: "mx-master-4", Bytes: []byte{0x01, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x01, 0x40, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 		},
 	}, buf, "")
-	if err == nil {
-		t.Fatal("streamSemanticEvents() returned nil, want decode error")
+	if err != nil {
+		t.Fatalf("streamSemanticEvents() returned error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "unsupported report id") {
-		t.Fatalf("streamSemanticEvents() error = %v, want decode error details", err)
+
+	got := buf.String()
+	if gotCount := strings.Count(got, "ignored_report"); gotCount != 1 {
+		t.Fatalf("output = %q, ignored_report count = %d, want 1", got, gotCount)
 	}
+	if !strings.Contains(got, "thumb_button_down") {
+		t.Fatalf("output = %q, want later semantic event after repeated decode errors", got)
+	}
+}
+
+func mustLoadFixtureReports(t *testing.T, name string) []RawReport {
+	t.Helper()
+
+	path := filepath.Join("..", "..", "testdata", "mxmaster4", name)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile(%q) returned error: %v", path, err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	reports := make([]RawReport, 0, len(lines))
+	for _, line := range lines {
+		report, err := parseFixtureReportLine(line)
+		if err != nil {
+			t.Fatalf("parseFixtureReportLine(%q) returned error: %v", line, err)
+		}
+		reports = append(reports, report)
+	}
+
+	return reports
+}
+
+func parseFixtureReportLine(line string) (RawReport, error) {
+	fields := strings.Fields(line)
+	if len(fields) != 9 {
+		return RawReport{}, strconv.ErrSyntax
+	}
+
+	at, err := time.Parse(time.RFC3339Nano, fields[0])
+	if err != nil {
+		return RawReport{}, err
+	}
+
+	bytes := make([]byte, 0, len(fields)-1)
+	for _, field := range fields[1:] {
+		value, err := strconv.ParseUint(field, 16, 8)
+		if err != nil {
+			return RawReport{}, err
+		}
+		bytes = append(bytes, byte(value))
+	}
+
+	return RawReport{
+		DeviceID: "mx-master-4",
+		At:       at,
+		Bytes:    bytes,
+	}, nil
 }

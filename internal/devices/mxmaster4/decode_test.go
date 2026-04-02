@@ -111,15 +111,82 @@ func TestAdapterDecodeHoldMoveDownFixtureDoesNotEmitThumbButtonUp(t *testing.T) 
 	}
 }
 
+func TestAdapterDecodeIgnoresPointerOnlyState(t *testing.T) {
+	adapter := Adapter{}
+
+	event, err := adapter.Decode(events.RawReport{
+		DeviceID: "mx-master-4",
+		Bytes:    []byte{0x02, 0x01, 0x00, 0x00, 0xe0, 0xff, 0x00, 0x00},
+	})
+	if err != nil {
+		t.Fatalf("Decode() returned error: %v", err)
+	}
+	if event != (events.DeviceEvent{}) {
+		t.Fatalf("Decode() event = %#v, want empty event for pointer-only state", event)
+	}
+}
+
+func TestAdapterDecodeIgnoresPostReleaseStateWithoutThumbContext(t *testing.T) {
+	adapter := Adapter{}
+
+	event, err := adapter.Decode(events.RawReport{
+		DeviceID: "mx-master-4",
+		Bytes:    []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+	})
+	if err != nil {
+		t.Fatalf("Decode() returned error: %v", err)
+	}
+	if event != (events.DeviceEvent{}) {
+		t.Fatalf("Decode() event = %#v, want empty event for post-release state", event)
+	}
+}
+
 func TestAdapterDecodeRejectsUnsupportedState(t *testing.T) {
 	adapter := Adapter{}
 
 	_, err := adapter.Decode(events.RawReport{
 		DeviceID: "mx-master-4",
-		Bytes:    []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		Bytes:    []byte{0x02, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 	})
 	if !errors.Is(err, ErrUnsupportedReport) {
 		t.Fatalf("Decode() error = %v, want ErrUnsupportedReport", err)
+	}
+}
+
+func TestAdapterDecodeEmitsThumbButtonUpFromPostReleaseState(t *testing.T) {
+	adapter := Adapter{}
+	reports := []events.RawReport{
+		{
+			DeviceID: "mx-master-4",
+			Bytes:    []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			DeviceID: "mx-master-4",
+			Bytes:    []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			DeviceID: "mx-master-4",
+			Bytes:    []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		},
+	}
+
+	var releaseCount int
+	for index, report := range reports {
+		event, err := adapter.Decode(report)
+		if err != nil {
+			t.Fatalf("Decode() report %d returned error: %v", index, err)
+		}
+		if event.Kind != events.ButtonUp || event.Control != "thumb_button" {
+			continue
+		}
+		releaseCount++
+		if index != 1 {
+			t.Fatalf("Decode() emitted thumb_button up at report %d, want post-release report 1", index)
+		}
+	}
+
+	if releaseCount != 1 {
+		t.Fatalf("releaseCount = %d, want 1", releaseCount)
 	}
 }
 
