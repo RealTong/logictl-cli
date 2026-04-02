@@ -22,6 +22,12 @@ func newInitCmd() *cobra.Command {
 				return err
 			}
 
+			if _, err := os.Stat(paths.ConfigFile); err == nil {
+				return os.ErrExist
+			} else if !os.IsNotExist(err) {
+				return err
+			}
+
 			if err := os.WriteFile(paths.ConfigFile, starterConfigContent(), 0o644); err != nil {
 				return err
 			}

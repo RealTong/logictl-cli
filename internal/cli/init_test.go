@@ -51,3 +51,37 @@ func TestInitCmdCreatesStarterConfigWithoutRepoLookup(t *testing.T) {
 		t.Fatalf("config dir missing: %v", err)
 	}
 }
+
+func TestInitCmdRefusesToOverwriteExistingConfig(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	paths := app.DefaultPaths()
+	if err := os.MkdirAll(paths.ConfigDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+
+	const original = "custom config\n"
+	if err := os.WriteFile(paths.ConfigFile, []byte(original), 0o644); err != nil {
+		t.Fatalf("WriteFile returned error: %v", err)
+	}
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{"init"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil, want existing config error")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("Execute error = %v, want existing config error", err)
+	}
+
+	data, readErr := os.ReadFile(paths.ConfigFile)
+	if readErr != nil {
+		t.Fatalf("ReadFile returned error: %v", readErr)
+	}
+	if got := string(data); got != original {
+		t.Fatalf("config file was modified: got %q, want %q", got, original)
+	}
+}
