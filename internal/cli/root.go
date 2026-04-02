@@ -9,6 +9,8 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	cmd.CompletionOptions.DisableDefaultCmd = true
+	cmd.AddCommand(newInitCmd())
+	cmd.AddCommand(newValidateCmd())
 	cmd.AddCommand(newVersionCmd())
 	return cmd
 }

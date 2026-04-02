@@ -1,0 +1,15 @@
+[daemon]
+enabled = true
+
+[[actions]]
+id = "launch"
+type = "shell"
+command = "open -a Safari"
+
+[[profiles]]
+name = "default"
+app = "*"
+
+  [[profiles.bindings]]
+  trigger = "button_1"
+  action = "launch"
