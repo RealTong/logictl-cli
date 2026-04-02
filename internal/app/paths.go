@@ -2,6 +2,7 @@ package app
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
 )
 
@@ -15,7 +16,7 @@ type Paths struct {
 }
 
 func DefaultPaths() Paths {
-	home := os.Getenv("HOME")
+	home := homeDir()
 	base := filepath.Join(home, ".config", "logi-cli")
 
 	return Paths{
@@ -26,4 +27,17 @@ func DefaultPaths() Paths {
 		SocketFile: filepath.Join(base, "state", "daemon.sock"),
 		PlistFile:  filepath.Join(home, "Library", "LaunchAgents", "io.realtong.logi-cli.plist"),
 	}
+}
+
+func homeDir() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+
+	current, err := user.Current()
+	if err == nil && current.HomeDir != "" {
+		return current.HomeDir
+	}
+
+	return string(filepath.Separator)
 }
