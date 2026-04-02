@@ -1,15 +1,6 @@
 [daemon]
 reload_on_change = true
-
-[[devices]]
-id = "mx-master-4"
-match_vendor_id = 1133
-match_product_id = 1234
-
-  [devices.capabilities]
-  thumb_button = "button_5"
-  wheel_left = "hscroll_left"
-  wheel_right = "hscroll_right"
+unsupported = true
 
 [[actions]]
 id = "close_tab"

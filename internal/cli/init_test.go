@@ -8,9 +8,19 @@ import (
 	"github.com/realtong/logi-cli/internal/app"
 )
 
-func TestInitCmdCreatesStarterConfig(t *testing.T) {
+func TestInitCmdCreatesStarterConfigWithoutRepoLookup(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+
+	cwd := t.TempDir()
+	original, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd returned error: %v", err)
+	}
+	defer func() { _ = os.Chdir(original) }()
+	if err := os.Chdir(cwd); err != nil {
+		t.Fatalf("Chdir returned error: %v", err)
+	}
 
 	cmd := NewRootCmd()
 	cmd.SetArgs([]string{"init"})
@@ -20,10 +30,6 @@ func TestInitCmdCreatesStarterConfig(t *testing.T) {
 	}
 
 	paths := app.DefaultPaths()
-	if _, err := os.Stat(paths.ConfigFile); err != nil {
-		t.Fatalf("starter config missing: %v", err)
-	}
-
 	data, err := os.ReadFile(paths.ConfigFile)
 	if err != nil {
 		t.Fatalf("ReadFile returned error: %v", err)
@@ -32,7 +38,7 @@ func TestInitCmdCreatesStarterConfig(t *testing.T) {
 		t.Fatal("starter config is empty")
 	}
 
-	if _, err := os.Stat(filepath.Join(paths.ConfigDir)); err != nil {
+	if _, err := os.Stat(filepath.Dir(paths.ConfigFile)); err != nil {
 		t.Fatalf("config dir missing: %v", err)
 	}
 }

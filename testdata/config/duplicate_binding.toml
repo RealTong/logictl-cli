@@ -1,19 +1,35 @@
 [daemon]
-enabled = true
+reload_on_change = true
+
+[[devices]]
+id = "mx-master-4"
+match_vendor_id = 1133
+match_product_id = 1234
 
 [[actions]]
-id = "launch"
-type = "shell"
-command = "open -a Safari"
+id = "close_tab"
+type = "shortcut"
+keys = ["cmd", "w"]
+
+[[actions]]
+id = "mission_control"
+type = "system"
+system = "mission_control"
 
 [[profiles]]
-name = "default"
-app = "*"
+id = "chrome_primary"
+app_bundle_id = "com.google.Chrome"
 
   [[profiles.bindings]]
-  trigger = "button_1"
-  action = "launch"
+  device = "mx-master-4"
+  trigger = "hold(thumb_button)+move(down)"
+  action = "close_tab"
+
+[[profiles]]
+id = "chrome_secondary"
+app_bundle_id = "com.google.Chrome"
 
   [[profiles.bindings]]
-  trigger = "button_1"
-  action = "launch"
+  device = "mx-master-4"
+  trigger = "hold(thumb_button)+move(down)"
+  action = "mission_control"

@@ -1,15 +1,36 @@
 [daemon]
-enabled = true
+reload_on_change = true
+
+[[devices]]
+id = "mx-master-4"
+match_vendor_id = 1133
+match_product_id = 1234
+
+  [devices.capabilities]
+  thumb_button = "button_5"
+  wheel_left = "hscroll_left"
+  wheel_right = "hscroll_right"
 
 [[actions]]
-id = "launch"
-type = "shell"
-command = "open -a Safari"
+id = "close_tab"
+type = "shortcut"
+keys = ["cmd", "w"]
+
+[[actions]]
+id = "mission_control"
+type = "system"
+system = "mission_control"
+
+[[actions]]
+id = "run_script"
+type = "script"
+script = "~/.config/logi-cli/scripts/close-tab.sh"
 
 [[profiles]]
-name = "default"
-app = "*"
+id = "chrome"
+app_bundle_id = "com.google.Chrome"
 
   [[profiles.bindings]]
-  trigger = "button_1"
-  action = "launch"
+  device = "mx-master-4"
+  trigger = "hold(thumb_button)+move(down)"
+  action = "close_tab"

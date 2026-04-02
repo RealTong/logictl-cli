@@ -8,26 +8,33 @@ type Config struct {
 }
 
 type DaemonConfig struct {
-	Enabled bool `toml:"enabled"`
+	ReloadOnChange bool `toml:"reload_on_change"`
 }
 
 type Device struct {
-	Name string `toml:"name"`
+	ID             string            `toml:"id"`
+	MatchVendorID  int               `toml:"match_vendor_id"`
+	MatchProductID int               `toml:"match_product_id"`
+	Capabilities   map[string]string `toml:"capabilities"`
 }
 
 type Action struct {
-	ID      string `toml:"id"`
-	Type    string `toml:"type"`
-	Command string `toml:"command,omitempty"`
+	ID     string   `toml:"id"`
+	Type   string   `toml:"type"`
+	Keys   []string `toml:"keys,omitempty"`
+	System string   `toml:"system,omitempty"`
+	Script string   `toml:"script,omitempty"`
 }
 
 type Profile struct {
-	Name     string    `toml:"name"`
-	App      string    `toml:"app"`
-	Bindings []Binding `toml:"bindings"`
+	ID          string    `toml:"id"`
+	AppBundleID string    `toml:"app_bundle_id"`
+	Bindings    []Binding `toml:"bindings"`
 }
 
 type Binding struct {
-	Trigger string `toml:"trigger"`
-	Action  string `toml:"action"`
+	Device   string `toml:"device,omitempty"`
+	Trigger  string `toml:"trigger"`
+	Action   string `toml:"action"`
+	Priority *int   `toml:"priority,omitempty"`
 }

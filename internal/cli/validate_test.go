@@ -30,7 +30,7 @@ func TestValidateCmdRejectsDuplicateBindingFixture(t *testing.T) {
 	if err == nil {
 		t.Fatal("Execute returned nil, want validation error")
 	}
-	if !strings.Contains(err.Error(), "duplicate") {
-		t.Fatalf("Execute error = %v, want duplicate binding error", err)
+	if !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("Execute error = %v, want ambiguous binding error", err)
 	}
 }
