@@ -102,11 +102,7 @@ func (s hidSource) Stream(ctx context.Context) (<-chan RawReport, <-chan error) 
 				continue
 			}
 
-			report := RawReport{
-				DeviceID: s.path,
-				Bytes:    append([]byte(nil), buffer[:n]...),
-				At:       s.now(),
-			}
+			report := s.rawReport(buffer[:n])
 
 			select {
 			case reports <- report:
@@ -117,4 +113,11 @@ func (s hidSource) Stream(ctx context.Context) (<-chan RawReport, <-chan error) 
 	}()
 
 	return reports, errs
+}
+
+func (s hidSource) rawReport(payload []byte) RawReport {
+	return RawReport{
+		Bytes: append([]byte(nil), payload...),
+		At:    s.now(),
+	}
 }

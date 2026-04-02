@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 
 	"github.com/realtong/logi-cli/internal/events"
 	"github.com/realtong/logi-cli/internal/hidapi"
@@ -107,12 +108,19 @@ func resolveEventDevicePath(hidClient hidapi.Client, explicitPath string) (strin
 func supportedEventCandidates(devices []hidapi.DeviceInfo) []hidapi.DeviceInfo {
 	candidates := make([]hidapi.DeviceInfo, 0, len(devices))
 	for _, device := range devices {
-		if device.VendorID != logitechVendorID {
+		if !isSupportedEventCandidate(device) {
 			continue
 		}
 		candidates = append(candidates, device)
 	}
 	return candidates
+}
+
+func isSupportedEventCandidate(device hidapi.DeviceInfo) bool {
+	if device.VendorID != logitechVendorID {
+		return false
+	}
+	return strings.Contains(strings.ToLower(device.Product), "mx master")
 }
 
 func streamRawReports(ctx context.Context, source rawSource, out io.Writer, outputPath string) error {
