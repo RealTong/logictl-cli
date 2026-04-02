@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const logitechVendorID = 0x046d
+
 type RawReport = events.RawReport
 
 type rawSource interface {
@@ -86,17 +88,31 @@ func resolveEventDevicePath(hidClient hidapi.Client, explicitPath string) (strin
 		return "", err
 	}
 
-	switch len(devices) {
+	switch candidates := supportedEventCandidates(devices); len(candidates) {
 	case 0:
-		return "", errors.New("no HID devices available")
+		if len(devices) == 0 {
+			return "", errors.New("no HID devices available")
+		}
+		return "", errors.New("no supported Logitech HID devices available; rerun with --path")
 	case 1:
-		if devices[0].Path == "" {
+		if candidates[0].Path == "" {
 			return "", errors.New("selected HID device is missing a path")
 		}
-		return devices[0].Path, nil
+		return candidates[0].Path, nil
 	default:
-		return "", errors.New("multiple HID devices found; rerun with --path")
+		return "", errors.New("multiple supported Logitech HID devices found; rerun with --path")
 	}
+}
+
+func supportedEventCandidates(devices []hidapi.DeviceInfo) []hidapi.DeviceInfo {
+	candidates := make([]hidapi.DeviceInfo, 0, len(devices))
+	for _, device := range devices {
+		if device.VendorID != logitechVendorID {
+			continue
+		}
+		candidates = append(candidates, device)
+	}
+	return candidates
 }
 
 func streamRawReports(ctx context.Context, source rawSource, out io.Writer, outputPath string) error {

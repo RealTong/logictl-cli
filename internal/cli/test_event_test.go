@@ -72,8 +72,9 @@ func TestStreamRawReportsWritesCaptureFile(t *testing.T) {
 func TestResolveEventDevicePathRejectsMultipleDevicesWithoutPath(t *testing.T) {
 	_, err := resolveEventDevicePath(hidapi.FakeClient{
 		Devices: []hidapi.DeviceInfo{
-			{Path: "first"},
-			{Path: "second"},
+			{Path: "first", VendorID: 0x046d},
+			{Path: "second", VendorID: 0x046d},
+			{Path: "other", VendorID: 0x1234},
 		},
 	}, "")
 	if err == nil {
@@ -81,5 +82,21 @@ func TestResolveEventDevicePathRejectsMultipleDevicesWithoutPath(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "--path") {
 		t.Fatalf("resolveEventDevicePath() error = %v, want --path guidance", err)
+	}
+}
+
+func TestResolveEventDevicePathSelectsSingleSupportedLogitechCandidate(t *testing.T) {
+	got, err := resolveEventDevicePath(hidapi.FakeClient{
+		Devices: []hidapi.DeviceInfo{
+			{Path: "keyboard", VendorID: 0x1234},
+			{Path: "mx-master-4", VendorID: 0x046d},
+			{Path: "trackpad", VendorID: 0x05ac},
+		},
+	}, "")
+	if err != nil {
+		t.Fatalf("resolveEventDevicePath() returned error: %v", err)
+	}
+	if got != "mx-master-4" {
+		t.Fatalf("resolveEventDevicePath() = %q, want %q", got, "mx-master-4")
 	}
 }
