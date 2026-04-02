@@ -18,13 +18,43 @@ type App struct {
 	runtime *Runtime
 }
 
+type nativeReportSourceFactoryAdapter struct {
+	factory platformmacos.HIDReportSourceFactory
+}
+
+func (a nativeReportSourceFactoryAdapter) Validate(spec nativeMatchSpec) error {
+	return a.factory.Validate(platformmacos.HIDReportMatch{
+		VendorID:     spec.VendorID,
+		ProductID:    spec.ProductID,
+		UsagePage:    spec.UsagePage,
+		Usage:        spec.Usage,
+		SerialNumber: spec.SerialNumber,
+		Product:      spec.Product,
+	})
+}
+
+func (a nativeReportSourceFactoryAdapter) Open(spec nativeMatchSpec) events.Source {
+	return a.factory.Open(platformmacos.HIDReportMatch{
+		VendorID:     spec.VendorID,
+		ProductID:    spec.ProductID,
+		UsagePage:    spec.UsagePage,
+		Usage:        spec.Usage,
+		SerialNumber: spec.SerialNumber,
+		Product:      spec.Product,
+	})
+}
+
 func NewApp(paths appcore.Paths) *App {
 	shortcutEmitter := actions.AppleScriptShortcutEmitter{}
 
 	return &App{
 		paths: paths,
 		runtime: NewRuntimeWithDependencies(RuntimeDependencies{
-			Source:      newMXMaster4EventSource(hidapi.NewClient(), events.NewHIDSource),
+			Source: newMXMaster4EventSource(
+				hidapi.NewClient(),
+				events.NewHIDSource,
+				nativeReportSourceFactoryAdapter{factory: platformmacos.NewHIDReportSourceFactory()},
+			),
 			AppResolver: platformmacos.NewEnvironment(),
 			Executor: actions.Executor{
 				ShortcutEmitter: shortcutEmitter,

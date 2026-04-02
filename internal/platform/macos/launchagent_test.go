@@ -2,6 +2,7 @@ package macos
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,6 +62,79 @@ func TestRestartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
 
 	if err := RestartLaunchAgent(context.Background(), paths, binary); err != nil {
 		t.Fatalf("RestartLaunchAgent returned error: %v", err)
+	}
+
+	if len(calls) != 2 {
+		t.Fatalf("len(calls) = %d, want 2", len(calls))
+	}
+	if got, want := calls[0], "bootout gui/501 "+paths.PlistFile; got != want {
+		t.Fatalf("calls[0] = %q, want %q", got, want)
+	}
+	if got, want := calls[1], "bootstrap gui/501 "+paths.PlistFile; got != want {
+		t.Fatalf("calls[1] = %q, want %q", got, want)
+	}
+}
+
+func TestStartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
+	paths := launchAgentTestPaths(t)
+	binary := "/tmp/logi-cli"
+
+	previousRun := runLaunchctl
+	previousUID := currentLaunchctlUID
+	t.Cleanup(func() {
+		runLaunchctl = previousRun
+		currentLaunchctlUID = previousUID
+	})
+
+	var calls []string
+	runLaunchctl = func(_ context.Context, args ...string) error {
+		calls = append(calls, strings.Join(args, " "))
+		return nil
+	}
+	currentLaunchctlUID = func() (string, error) {
+		return "501", nil
+	}
+
+	if err := StartLaunchAgent(context.Background(), paths, binary); err != nil {
+		t.Fatalf("StartLaunchAgent returned error: %v", err)
+	}
+
+	if len(calls) != 2 {
+		t.Fatalf("len(calls) = %d, want 2", len(calls))
+	}
+	if got, want := calls[0], "bootout gui/501 "+paths.PlistFile; got != want {
+		t.Fatalf("calls[0] = %q, want %q", got, want)
+	}
+	if got, want := calls[1], "bootstrap gui/501 "+paths.PlistFile; got != want {
+		t.Fatalf("calls[1] = %q, want %q", got, want)
+	}
+}
+
+func TestStartLaunchAgentIgnoresBootoutFailureWhenServiceIsAbsent(t *testing.T) {
+	paths := launchAgentTestPaths(t)
+	binary := "/tmp/logi-cli"
+
+	previousRun := runLaunchctl
+	previousUID := currentLaunchctlUID
+	t.Cleanup(func() {
+		runLaunchctl = previousRun
+		currentLaunchctlUID = previousUID
+	})
+
+	var calls []string
+	runLaunchctl = func(_ context.Context, args ...string) error {
+		calls = append(calls, strings.Join(args, " "))
+		if args[0] == "bootout" {
+			return errors.New("service not found")
+		}
+		return nil
+	}
+	currentLaunchctlUID = func() (string, error) {
+		return "501", nil
+	}
+
+	if err := StartLaunchAgent(context.Background(), paths, binary); err != nil {
+		t.Fatalf("StartLaunchAgent returned error: %v", err)
 	}
 
 	if len(calls) != 2 {

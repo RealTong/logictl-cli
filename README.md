@@ -25,6 +25,17 @@
 3. Reload config changes with `go run ./cmd/logi reload`
 4. Install the persistent LaunchAgent with `go run ./cmd/logi daemon start`
 
+## Background Daemon Permissions
+
+- `daemon run` runs in the current foreground process, so it uses the permissions already granted to your terminal or host app.
+- `daemon start` installs a LaunchAgent and stages a stable background binary at `~/.config/logi-cli/state/logi-launchagent`.
+- On macOS, that staged binary needs its own `Input Monitoring` permission. If `daemon start` reports a permission error, add `~/.config/logi-cli/state/logi-launchagent` to `System Settings -> Privacy & Security -> Input Monitoring`, then retry.
+
+## MX Master 4 BLE Notes
+
+- `MX Master 4` over Bluetooth Low Energy exposes a shared HID path that can seize the primary pointer when opened through generic `hidapi` path access.
+- The daemon now uses native macOS `IOHIDManager` capture for this layout instead of opening the shared path directly, which avoids freezing mouse movement.
+
 ## Example Binding
 
 The sample config maps:

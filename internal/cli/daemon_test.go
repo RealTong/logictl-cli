@@ -4,7 +4,16 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+	"time"
+
+	appcore "github.com/realtong/logi-cli/internal/app"
+	"github.com/realtong/logi-cli/internal/daemon"
+	"github.com/realtong/logi-cli/internal/ipc"
 )
 
 type fakeDaemonPreflight struct {
@@ -77,5 +86,159 @@ func TestDaemonStartCmdRejectsPreflightFailures(t *testing.T) {
 	}
 	if len(manager.calls) != 0 {
 		t.Fatalf("manager.calls = %#v, want no service-manager calls on preflight failure", manager.calls)
+	}
+}
+
+func TestStageLaunchAgentBinaryCopiesExecutableIntoStableStatePath(t *testing.T) {
+	root := t.TempDir()
+	sourceDir := filepath.Join(root, "go-build123", "b001", "exe")
+	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(%q) returned error: %v", sourceDir, err)
+	}
+
+	source := filepath.Join(sourceDir, "logi")
+	if err := os.WriteFile(source, []byte("binary"), 0o755); err != nil {
+		t.Fatalf("WriteFile(%q) returned error: %v", source, err)
+	}
+
+	paths := appcore.Paths{
+		StateDir: filepath.Join(root, "state"),
+	}
+
+	staged, err := stageLaunchAgentBinary(paths, source)
+	if err != nil {
+		t.Fatalf("stageLaunchAgentBinary() returned error: %v", err)
+	}
+	if staged == source {
+		t.Fatalf("stageLaunchAgentBinary() = %q, want stable copied path", staged)
+	}
+
+	got, err := os.ReadFile(staged)
+	if err != nil {
+		t.Fatalf("ReadFile(%q) returned error: %v", staged, err)
+	}
+	if string(got) != "binary" {
+		t.Fatalf("staged file contents = %q, want %q", string(got), "binary")
+	}
+}
+
+func TestStageLaunchAgentBinaryLeavesStableExecutableInPlace(t *testing.T) {
+	root := t.TempDir()
+	source := filepath.Join(root, "bin", "logi")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("MkdirAll(%q) returned error: %v", filepath.Dir(source), err)
+	}
+	if err := os.WriteFile(source, []byte("binary"), 0o755); err != nil {
+		t.Fatalf("WriteFile(%q) returned error: %v", source, err)
+	}
+
+	paths := appcore.Paths{
+		StateDir: filepath.Join(root, "state"),
+	}
+
+	staged, err := stageLaunchAgentBinary(paths, source)
+	if err != nil {
+		t.Fatalf("stageLaunchAgentBinary() returned error: %v", err)
+	}
+	if staged != source {
+		t.Fatalf("stageLaunchAgentBinary() = %q, want original stable path %q", staged, source)
+	}
+}
+
+func TestStageLaunchAgentBinaryCopiesGoBuildCacheExecutableIntoStableStatePath(t *testing.T) {
+	root := t.TempDir()
+	sourceDir := filepath.Join(root, "Library", "Caches", "go-build", "e6")
+	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(%q) returned error: %v", sourceDir, err)
+	}
+
+	source := filepath.Join(sourceDir, "logi")
+	if err := os.WriteFile(source, []byte("binary"), 0o755); err != nil {
+		t.Fatalf("WriteFile(%q) returned error: %v", source, err)
+	}
+
+	paths := appcore.Paths{
+		StateDir: filepath.Join(root, "state"),
+	}
+
+	staged, err := stageLaunchAgentBinary(paths, source)
+	if err != nil {
+		t.Fatalf("stageLaunchAgentBinary() returned error: %v", err)
+	}
+	if staged == source {
+		t.Fatalf("stageLaunchAgentBinary() = %q, want stable copied path", staged)
+	}
+}
+
+func TestWaitForDaemonReadyReportsRunningSocket(t *testing.T) {
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("logi-cli-ready-%d.sock", time.Now().UnixNano()))
+	t.Cleanup(func() {
+		_ = os.Remove(socketPath)
+	})
+	server := daemon.NewServer(socketPath, ipc.Status{Running: true, Message: "running"})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		_ = server.Run(ctx)
+	}()
+
+	if err := waitForDaemonReady(socketPath, 2*time.Second); err != nil {
+		t.Fatalf("waitForDaemonReady() returned error: %v", err)
+	}
+}
+
+func TestLaunchAgentStartFailureUsesPermissionGuidanceFromDaemonLog(t *testing.T) {
+	root := t.TempDir()
+	paths := appcore.Paths{
+		LogDir:   filepath.Join(root, "logs"),
+		StateDir: filepath.Join(root, "state"),
+	}
+	if err := os.MkdirAll(paths.LogDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(%q) returned error: %v", paths.LogDir, err)
+	}
+
+	stagedBinary := filepath.Join(paths.StateDir, "logi-launchagent")
+	if err := os.MkdirAll(paths.StateDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(%q) returned error: %v", paths.StateDir, err)
+	}
+	if err := os.WriteFile(filepath.Join(paths.LogDir, "daemon.stderr.log"), []byte("Error: IOHIDManagerOpen failed for MX Master 4: 0xe00002e2\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile(stderr log) returned error: %v", err)
+	}
+
+	err := launchAgentStartFailure(paths, stagedBinary, fmt.Errorf("daemon socket never became ready"))
+	if err == nil {
+		t.Fatal("launchAgentStartFailure() returned nil, want permission guidance")
+	}
+	if got := err.Error(); !strings.Contains(got, stagedBinary) || !strings.Contains(got, "Input Monitoring") {
+		t.Fatalf("launchAgentStartFailure() = %q, want Input Monitoring guidance for %q", got, stagedBinary)
+	}
+}
+
+func TestLaunchAgentStartFailureFindsPermissionErrorBeforeCobraUsageTail(t *testing.T) {
+	root := t.TempDir()
+	paths := appcore.Paths{
+		LogDir:   filepath.Join(root, "logs"),
+		StateDir: filepath.Join(root, "state"),
+	}
+	if err := os.MkdirAll(paths.LogDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(%q) returned error: %v", paths.LogDir, err)
+	}
+	if err := os.MkdirAll(paths.StateDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(%q) returned error: %v", paths.StateDir, err)
+	}
+
+	stagedBinary := filepath.Join(paths.StateDir, "logi-launchagent")
+	logBody := "Error: IOHIDManagerOpen failed for MX Master 4: 0xe00002e2\nUsage:\n  logi daemon run [flags]\n\nFlags:\n  -h, --help   help for run\n"
+	if err := os.WriteFile(filepath.Join(paths.LogDir, "daemon.stderr.log"), []byte(logBody), 0o644); err != nil {
+		t.Fatalf("WriteFile(stderr log) returned error: %v", err)
+	}
+
+	err := launchAgentStartFailure(paths, stagedBinary, fmt.Errorf("daemon socket never became ready"))
+	if err == nil {
+		t.Fatal("launchAgentStartFailure() returned nil, want permission guidance")
+	}
+	if got := err.Error(); !strings.Contains(got, "Input Monitoring") {
+		t.Fatalf("launchAgentStartFailure() = %q, want Input Monitoring guidance", got)
 	}
 }

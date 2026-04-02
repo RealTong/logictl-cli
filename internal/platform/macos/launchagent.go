@@ -47,6 +47,7 @@ func StartLaunchAgent(ctx context.Context, paths appcore.Paths, binary string) e
 		return err
 	}
 
+	_ = runLaunchctl(ctx, "bootout", domain, paths.PlistFile)
 	return runLaunchctl(ctx, "bootstrap", domain, paths.PlistFile)
 }
 

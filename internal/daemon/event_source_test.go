@@ -1,13 +1,54 @@
 package daemon
 
 import (
-	"strings"
+	"context"
 	"testing"
+	"time"
 
+	"github.com/realtong/logi-cli/internal/events"
 	"github.com/realtong/logi-cli/internal/hidapi"
 )
 
-func TestMXMaster4EventSourceResolvePathRejectsSharedPrimaryPointerPath(t *testing.T) {
+type fakeNativeSourceFactory struct {
+	validateSpec nativeMatchSpec
+	validateErr  error
+	openSpec     nativeMatchSpec
+	reports      []events.RawReport
+	err          error
+}
+
+func (f *fakeNativeSourceFactory) Validate(spec nativeMatchSpec) error {
+	f.validateSpec = spec
+	return f.validateErr
+}
+
+func (f *fakeNativeSourceFactory) Open(spec nativeMatchSpec) events.Source {
+	f.openSpec = spec
+	return fakeRawEventSource{reports: f.reports, err: f.err}
+}
+
+type fakeRawEventSource struct {
+	reports []events.RawReport
+	err     error
+}
+
+func (s fakeRawEventSource) Stream(context.Context) (<-chan events.RawReport, <-chan error) {
+	reportsCh := make(chan events.RawReport, len(s.reports))
+	for _, report := range s.reports {
+		reportsCh <- report
+	}
+	close(reportsCh)
+
+	errCh := make(chan error, 1)
+	if s.err != nil {
+		errCh <- s.err
+	}
+	close(errCh)
+	return reportsCh, errCh
+}
+
+func TestMXMaster4EventSourceValidateFallsBackToNativePassiveCaptureForSharedPrimaryPointerPath(t *testing.T) {
+	nativeFactory := &fakeNativeSourceFactory{}
 	source := mxMaster4EventSource{hidClient: hidapi.FakeClient{
 		Devices: []hidapi.DeviceInfo{
 			{
@@ -35,14 +76,21 @@ func TestMXMaster4EventSourceResolvePathRejectsSharedPrimaryPointerPath(t *testi
 				Product:   "MX Master 4",
 			},
 		},
-	}}
+	}, openNative: nativeFactory}
 
-	_, err := source.resolvePath()
-	if err == nil {
-		t.Fatal("resolvePath() returned nil, want unsafe primary pointer error")
+	if err := source.Validate(); err != nil {
+		t.Fatalf("Validate() returned error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "unsafe") {
-		t.Fatalf("resolvePath() error = %v, want unsafe-path guidance", err)
+
+	wantSpec := nativeMatchSpec{
+		VendorID:  0x046d,
+		ProductID: 0xb042,
+		UsagePage: 0x0001,
+		Usage:     0x0002,
+		Product:   "MX Master 4",
+	}
+	if nativeFactory.validateSpec != wantSpec {
+		t.Fatalf("Validate() native spec = %#v, want %#v", nativeFactory.validateSpec, wantSpec)
 	}
 }
 
@@ -74,5 +122,74 @@ func TestMXMaster4EventSourceResolvePathPrefersDedicatedVendorSpecificPath(t *te
 	}
 	if got != "vendor-path" {
 		t.Fatalf("resolvePath() = %q, want %q", got, "vendor-path")
+	}
+}
+
+func TestMXMaster4EventSourceStreamUsesNativePassiveCaptureForSharedPrimaryPointerPath(t *testing.T) {
+	nativeFactory := &fakeNativeSourceFactory{
+		reports: []events.RawReport{
+			{
+				At:    time.Unix(1, 0),
+				Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00},
+			},
+			{
+				At:    time.Unix(2, 0),
+				Bytes: []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00},
+			},
+		},
+	}
+	source := mxMaster4EventSource{hidClient: hidapi.FakeClient{
+		Devices: []hidapi.DeviceInfo{
+			{
+				Path:      "ble-shared",
+				VendorID:  0x046d,
+				ProductID: 0xb042,
+				UsagePage: 0x0001,
+				Usage:     0x0002,
+				Product:   "MX Master 4",
+			},
+			{
+				Path:      "ble-shared",
+				VendorID:  0x046d,
+				ProductID: 0xb042,
+				UsagePage: 0x0001,
+				Usage:     0x0001,
+				Product:   "MX Master 4",
+			},
+			{
+				Path:      "ble-shared",
+				VendorID:  0x046d,
+				ProductID: 0xb042,
+				UsagePage: 0xff43,
+				Usage:     0x0202,
+				Product:   "MX Master 4",
+			},
+		},
+	}, openNative: nativeFactory}
+
+	eventsCh, errs := source.Stream(context.Background())
+
+	var got []events.DeviceEvent
+	for event := range eventsCh {
+		got = append(got, event)
+	}
+
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("Stream() reported error: %v", err)
+		}
+	}
+
+	if len(got) != 2 {
+		t.Fatalf("Stream() produced %d events, want 2", len(got))
+	}
+	if got[0].Control != "thumb_button" || got[0].Kind != events.ButtonDown {
+		t.Fatalf("first event = %#v, want thumb button down", got[0])
+	}
+	if got[1].Control != "thumb_button" || got[1].Kind != events.ButtonUp {
+		t.Fatalf("second event = %#v, want thumb button up", got[1])
+	}
+	if nativeFactory.openSpec.UsagePage != 0x0001 || nativeFactory.openSpec.Usage != 0x0002 {
+		t.Fatalf("Open() spec = %#v, want primary mouse usage", nativeFactory.openSpec)
 	}
 }
