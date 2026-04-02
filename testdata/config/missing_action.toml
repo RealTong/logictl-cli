@@ -1,0 +1,21 @@
+[daemon]
+reload_on_change = true
+
+[[devices]]
+id = "mx-master-4"
+match_vendor_id = 1133
+match_product_id = 1234
+
+[[actions]]
+id = "close_tab"
+type = "shortcut"
+keys = ["cmd", "w"]
+
+[[profiles]]
+id = "chrome"
+app_bundle_id = "com.google.Chrome"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(thumb_button)+move(down)"
+  action = "missing_action"

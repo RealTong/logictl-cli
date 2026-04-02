@@ -1,0 +1,17 @@
+[daemon]
+reload_on_change = true
+unsupported = true
+
+[[actions]]
+id = "close_tab"
+type = "shortcut"
+keys = ["cmd", "w"]
+
+[[profiles]]
+id = "chrome"
+app_bundle_id = "com.google.Chrome"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(thumb_button)+move(down)"
+  action = "close_tab"
