@@ -6,15 +6,28 @@ id = "mx-master-4"
 match_vendor_id = 1133
 match_product_id = 45122
 
-  [devices.capabilities]
-  thumb_button = "button_5"
-  wheel_left = "hscroll_left"
-  wheel_right = "hscroll_right"
+  [devices.scroll]
+  direction = "standard"
+  smooth_scroll = true
 
-[[actions]]
-id = "close_tab"
-type = "shortcut"
-keys = ["cmd", "w"]
+  [devices.capabilities]
+  left_button = "left_button"
+  right_button = "right_button"
+  middle_button = "middle_button"
+  back_button = "back_button"
+  forward_button = "forward_button"
+  gesture_button = "gesture_button"
+  wheel_up = "vertical_scroll_up"
+  wheel_down = "vertical_scroll_down"
+  thumb_wheel_left = "horizontal_scroll_left"
+  thumb_wheel_right = "horizontal_scroll_right"
+  mode_shift_button = "wheel_mode_toggle"
+  wheel_mode_ratchet = "wheel_mode_ratchet"
+  wheel_mode_free_spin = "wheel_mode_free_spin"
+  haptic_panel_press = "haptic_panel_press"
+
+# The main wheel, thumb wheel, and top mode-shift button already keep their
+# hardware defaults unless you explicitly bind their semantic triggers below.
 
 [[actions]]
 id = "mission_control"
@@ -22,17 +35,82 @@ type = "system"
 system = "mission_control"
 
 [[actions]]
-id = "custom_script"
-type = "script"
-script = "~/.config/logi-cli/scripts/custom.sh"
+id = "app_expose"
+type = "system"
+system = "app_expose"
+
+[[actions]]
+id = "previous_desktop"
+type = "system"
+system = "previous_desktop"
+
+[[actions]]
+id = "next_desktop"
+type = "system"
+system = "next_desktop"
+
+[[actions]]
+id = "navigate_back"
+type = "shortcut"
+keys = ["cmd", "["]
+
+[[actions]]
+id = "navigate_forward"
+type = "shortcut"
+keys = ["cmd", "]"]
+
+[[actions]]
+id = "haptic_panel_default"
+type = "system"
+system = "launchpad"
+
+[[actions]]
+id = "close_tab"
+type = "shortcut"
+keys = ["cmd", "w"]
 
 [[profiles]]
 id = "global"
 
   [[profiles.bindings]]
   device = "mx-master-4"
-  trigger = "thumb_button_down"
+  trigger = "gesture_button_down"
   action = "mission_control"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(down)"
+  action = "mission_control"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(up)"
+  action = "app_expose"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(left)"
+  action = "previous_desktop"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(right)"
+  action = "next_desktop"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "back_button_down"
+  action = "navigate_back"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "forward_button_down"
+  action = "navigate_forward"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "haptic_panel_press"
+  action = "haptic_panel_default"
 
 [[profiles]]
 id = "chrome"
@@ -40,5 +118,5 @@ app_bundle_id = "com.google.Chrome"
 
   [[profiles.bindings]]
   device = "mx-master-4"
-  trigger = "hold(thumb_button)+move(down)"
+  trigger = "hold(gesture_button)+move(down)"
   action = "close_tab"

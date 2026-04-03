@@ -95,22 +95,21 @@ func (s mxMaster4EventSource) Stream(ctx context.Context) (<-chan events.DeviceE
 				}
 
 				report.DeviceID = mxMaster4DeviceID
-				event, err := adapter.Decode(report)
+				decoded, err := adapter.Decode(report)
 				if err != nil {
 					if errors.Is(err, mxmaster4.ErrUnsupportedReport) {
 						continue
 					}
 					continue
 				}
-				if event == (events.DeviceEvent{}) {
-					continue
-				}
 
-				for _, normalized := range normalizer.Push(event) {
-					select {
-					case out <- normalized:
-					case <-ctx.Done():
-						return
+				for _, event := range decoded {
+					for _, normalized := range normalizer.Push(event) {
+						select {
+						case out <- normalized:
+						case <-ctx.Done():
+							return
+						}
 					}
 				}
 			case err, ok := <-rawErrs:

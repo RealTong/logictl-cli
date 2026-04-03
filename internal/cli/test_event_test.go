@@ -166,8 +166,8 @@ func TestTestEventDeviceCmdDefaultsToSemanticOutput(t *testing.T) {
 			}
 			return fakeSource{
 				events: []RawReport{
-					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x20, 0x01, 0x00, 0x00}},
+					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00}},
 					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 				},
 			}
@@ -181,16 +181,16 @@ func TestTestEventDeviceCmdDefaultsToSemanticOutput(t *testing.T) {
 	}
 
 	got := buf.String()
-	if !strings.Contains(got, "thumb_button_down") {
-		t.Fatalf("output = %q, want thumb_button_down", got)
+	if !strings.Contains(got, "gesture_button_down") {
+		t.Fatalf("output = %q, want gesture_button_down", got)
 	}
-	if !strings.Contains(got, "thumb_button_hold") {
-		t.Fatalf("output = %q, want thumb_button_hold", got)
+	if !strings.Contains(got, "gesture_button_hold") {
+		t.Fatalf("output = %q, want gesture_button_hold", got)
 	}
-	if !strings.Contains(got, "hold(thumb_button)+move(down)") {
-		t.Fatalf("output = %q, want hold(thumb_button)+move(down)", got)
+	if !strings.Contains(got, "hold(gesture_button)+move(down)") {
+		t.Fatalf("output = %q, want hold(gesture_button)+move(down)", got)
 	}
-	if strings.Contains(got, "02 40 00 00 00 00 00 00") {
+	if strings.Contains(got, "02 20 00 00 00 00 00 00") {
 		t.Fatalf("output = %q, want semantic events instead of raw bytes", got)
 	}
 }
@@ -206,7 +206,7 @@ func TestTestEventDeviceCmdRawFlagPreservesRawOutput(t *testing.T) {
 		func(path string) rawSource {
 			return fakeSource{
 				events: []RawReport{
-					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+					{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 				},
 			}
 		},
@@ -220,10 +220,10 @@ func TestTestEventDeviceCmdRawFlagPreservesRawOutput(t *testing.T) {
 	}
 
 	got := buf.String()
-	if !strings.Contains(got, "02 40 00 00 00 00 00 00") {
+	if !strings.Contains(got, "02 20 00 00 00 00 00 00") {
 		t.Fatalf("output = %q, want raw bytes", got)
 	}
-	if strings.Contains(got, "thumb_button_down") {
+	if strings.Contains(got, "gesture_button_down") {
 		t.Fatalf("output = %q, want raw output when --raw is set", got)
 	}
 }
@@ -296,7 +296,7 @@ func TestStreamSemanticEventsWritesUnsupportedReportVisibility(t *testing.T) {
 
 	err := streamSemanticEvents(context.Background(), fakeSource{
 		events: []RawReport{
-			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 		},
 	}, buf, "")
 	if err != nil {
@@ -307,7 +307,7 @@ func TestStreamSemanticEventsWritesUnsupportedReportVisibility(t *testing.T) {
 	if !strings.Contains(got, "unsupported_report") {
 		t.Fatalf("output = %q, want unsupported_report visibility", got)
 	}
-	if !strings.Contains(got, "02 10 00 00 00 00 00 00") {
+	if !strings.Contains(got, "02 80 00 00 00 00 00 00") {
 		t.Fatalf("output = %q, want raw bytes for unsupported report", got)
 	}
 }
@@ -317,9 +317,9 @@ func TestStreamSemanticEventsContinuesAfterDecodeError(t *testing.T) {
 
 	err := streamSemanticEvents(context.Background(), fakeSource{
 		events: []RawReport{
-			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 			{DeviceID: "mx-master-4", Bytes: []byte{0x01, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x20, 0x01, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00}},
 		},
 	}, buf, "")
 	if err != nil {
@@ -327,8 +327,8 @@ func TestStreamSemanticEventsContinuesAfterDecodeError(t *testing.T) {
 	}
 
 	got := buf.String()
-	if !strings.Contains(got, "thumb_button_down") {
-		t.Fatalf("output = %q, want thumb_button_down before decode error", got)
+	if !strings.Contains(got, "gesture_button_down") {
+		t.Fatalf("output = %q, want gesture_button_down before decode error", got)
 	}
 	if !strings.Contains(got, "ignored_report") {
 		t.Fatalf("output = %q, want ignored_report visibility", got)
@@ -336,7 +336,7 @@ func TestStreamSemanticEventsContinuesAfterDecodeError(t *testing.T) {
 	if !strings.Contains(got, "unsupported report id") {
 		t.Fatalf("output = %q, want decode error details", got)
 	}
-	if !strings.Contains(got, "hold(thumb_button)+move(down)") {
+	if !strings.Contains(got, "hold(gesture_button)+move(down)") {
 		t.Fatalf("output = %q, want later semantic gesture after decode error", got)
 	}
 	if gotCount := strings.Count(got, "ignored_report"); gotCount != 1 {
@@ -348,21 +348,26 @@ func TestStreamSemanticEventsSuppressesKnownReleaseTailNoise(t *testing.T) {
 	buf := new(bytes.Buffer)
 
 	err := streamSemanticEvents(context.Background(), fakeSource{
-		events: mustLoadFixtureReports(t, "thumb-button-hold-move-down.txt"),
+		events: []RawReport{
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		},
 	}, buf, "")
 	if err != nil {
 		t.Fatalf("streamSemanticEvents() returned error: %v", err)
 	}
 
 	got := buf.String()
-	if !strings.Contains(got, "thumb_button_down") {
-		t.Fatalf("output = %q, want thumb_button_down", got)
+	if !strings.Contains(got, "gesture_button_down") {
+		t.Fatalf("output = %q, want gesture_button_down", got)
 	}
-	if !strings.Contains(got, "thumb_button_hold") {
-		t.Fatalf("output = %q, want thumb_button_hold", got)
+	if !strings.Contains(got, "gesture_button_hold") {
+		t.Fatalf("output = %q, want gesture_button_hold", got)
 	}
-	if !strings.Contains(got, "hold(thumb_button)+move(down)") {
-		t.Fatalf("output = %q, want hold(thumb_button)+move(down)", got)
+	if !strings.Contains(got, "hold(gesture_button)+move(down)") {
+		t.Fatalf("output = %q, want hold(gesture_button)+move(down)", got)
 	}
 	if strings.Contains(got, "unsupported_report") {
 		t.Fatalf("output = %q, want known release-tail noise suppressed", got)
@@ -372,14 +377,14 @@ func TestStreamSemanticEventsSuppressesKnownReleaseTailNoise(t *testing.T) {
 	}
 }
 
-func TestStreamSemanticEventsSkipsKnownNonThumbStates(t *testing.T) {
+func TestStreamSemanticEventsSkipsKnownNonGestureStates(t *testing.T) {
 	buf := new(bytes.Buffer)
 
 	err := streamSemanticEvents(context.Background(), fakeSource{
 		events: []RawReport{
 			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x01, 0x00, 0x00, 0xe0, 0xff, 0x00, 0x00}},
-			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}},
-			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 		},
 	}, buf, "")
@@ -388,11 +393,11 @@ func TestStreamSemanticEventsSkipsKnownNonThumbStates(t *testing.T) {
 	}
 
 	got := buf.String()
-	if !strings.Contains(got, "thumb_button_down") {
-		t.Fatalf("output = %q, want thumb_button_down", got)
+	if !strings.Contains(got, "gesture_button_down") {
+		t.Fatalf("output = %q, want gesture_button_down", got)
 	}
-	if !strings.Contains(got, "thumb_button_up") {
-		t.Fatalf("output = %q, want thumb_button_up", got)
+	if !strings.Contains(got, "gesture_button_up") {
+		t.Fatalf("output = %q, want gesture_button_up", got)
 	}
 	if strings.Contains(got, "unsupported_report") {
 		t.Fatalf("output = %q, want known non-thumb states suppressed", got)
@@ -409,7 +414,7 @@ func TestStreamSemanticEventsDeduplicatesRepeatedDecodeErrors(t *testing.T) {
 		events: []RawReport{
 			{DeviceID: "mx-master-4", Bytes: []byte{0x01, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 			{DeviceID: "mx-master-4", Bytes: []byte{0x01, 0x40, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00}},
-			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			{DeviceID: "mx-master-4", Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 		},
 	}, buf, "")
 	if err != nil {
@@ -420,7 +425,7 @@ func TestStreamSemanticEventsDeduplicatesRepeatedDecodeErrors(t *testing.T) {
 	if gotCount := strings.Count(got, "ignored_report"); gotCount != 1 {
 		t.Fatalf("output = %q, ignored_report count = %d, want 1", got, gotCount)
 	}
-	if !strings.Contains(got, "thumb_button_down") {
+	if !strings.Contains(got, "gesture_button_down") {
 		t.Fatalf("output = %q, want later semantic event after repeated decode errors", got)
 	}
 }

@@ -37,6 +37,9 @@ func Validate(cfg *Config) error {
 		if _, exists := deviceIDs[device.ID]; exists {
 			return fmt.Errorf("duplicate device id %q", device.ID)
 		}
+		if err := validateScrollConfig(device.ID, device.Scroll); err != nil {
+			return err
+		}
 		deviceIDs[device.ID] = struct{}{}
 	}
 
@@ -74,6 +77,15 @@ func Validate(cfg *Config) error {
 	}
 
 	return nil
+}
+
+func validateScrollConfig(deviceID string, scroll ScrollConfig) error {
+	switch scroll.Direction {
+	case "", "natural", "standard":
+		return nil
+	default:
+		return fmt.Errorf("device %q has unsupported scroll direction %q", deviceID, scroll.Direction)
+	}
 }
 
 func validateAction(action Action) error {

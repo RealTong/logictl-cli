@@ -8,11 +8,10 @@ import (
 )
 
 const productID = 0xb042
-const postReleaseState = 0x20
 
 type Adapter struct {
-	thumbButtonHeld  bool
-	thumbButtonMoved bool
+	pressedButtons  byte
+	hapticPanelSeen bool
 }
 
 func (Adapter) Matches(info hidapi.DeviceInfo) bool {
@@ -25,45 +24,87 @@ func (Adapter) Matches(info hidapi.DeviceInfo) bool {
 	return strings.Contains(strings.ToLower(info.Product), "mx master 4")
 }
 
-func (a *Adapter) Decode(report events.RawReport) (events.DeviceEvent, error) {
-	state, deltaX, deltaY, err := decodeReport(report)
+func (a *Adapter) Decode(report events.RawReport) ([]events.DeviceEvent, error) {
+	decoded, err := decodeReport(report)
 	if err != nil {
-		return events.DeviceEvent{}, err
+		return nil, err
 	}
 
-	if state == thumbButtonPressed {
-		if !a.thumbButtonHeld {
-			a.thumbButtonHeld = true
-			a.thumbButtonMoved = false
-			return buttonEvent(report, events.ButtonDown), nil
-		}
-		if deltaX != 0 || deltaY != 0 {
-			a.thumbButtonMoved = true
-			return pointerMoveEvent(report, deltaX, deltaY), nil
-		}
-		return events.DeviceEvent{}, nil
+	switch decoded.kind {
+	case standardReport:
+		return a.decodeStandardReport(report, decoded), nil
+	case modeReport:
+		return []events.DeviceEvent{
+			triggerEvent(report, "mode_shift_button_press"),
+			triggerEvent(report, modeGesture(decoded.modeFreeSpin)),
+		}, nil
+	default:
+		return nil, ErrUnsupportedReport
 	}
-
-	if a.thumbButtonHeld {
-		a.thumbButtonHeld = false
-		moved := a.thumbButtonMoved
-		a.thumbButtonMoved = false
-		if !moved && isIdleState(state, deltaX, deltaY) {
-			return buttonEvent(report, events.ButtonUp), nil
-		}
-	}
-
-	if isIgnoredState(state) {
-		return events.DeviceEvent{}, nil
-	}
-
-	return events.DeviceEvent{}, unsupportedReportError(state)
 }
 
-func isIdleState(state byte, deltaX, deltaY int) bool {
-	return isIgnoredState(state) && deltaX == 0 && deltaY == 0
+func (a *Adapter) decodeStandardReport(report events.RawReport, decoded decodedReport) []events.DeviceEvent {
+	out := make([]events.DeviceEvent, 0, len(buttonSpecs)+4)
+
+	if isHapticPanelPress(decoded) {
+		if !a.hapticPanelSeen {
+			out = append(out, triggerEvent(report, "haptic_panel_press"))
+			a.hapticPanelSeen = true
+		}
+	} else {
+		a.hapticPanelSeen = false
+	}
+
+	changed := a.pressedButtons ^ decoded.buttons
+	for _, spec := range buttonSpecs {
+		if changed&spec.mask == 0 {
+			continue
+		}
+		kind := events.ButtonUp
+		if decoded.buttons&spec.mask != 0 {
+			kind = events.ButtonDown
+		}
+		out = append(out, buttonEvent(report, spec.control, kind))
+	}
+	a.pressedButtons = decoded.buttons
+
+	if decoded.buttons&buttonMaskGesture != 0 && (decoded.deltaX != 0 || decoded.deltaY != 0) {
+		out = append(out, pointerMoveEvent(report, decoded.deltaX, decoded.deltaY))
+	}
+	out = append(out, emitTicks(report, decoded.wheel, "wheel_up", "wheel_down")...)
+	out = append(out, emitTicks(report, decoded.thumbWheel, "thumb_wheel_right", "thumb_wheel_left")...)
+	return out
 }
 
-func isIgnoredState(state byte) bool {
-	return state == 0x00 || state == 0x01 || state == postReleaseState
+func emitTicks(report events.RawReport, delta int, positive, negative string) []events.DeviceEvent {
+	if delta == 0 {
+		return nil
+	}
+
+	gesture := positive
+	if delta < 0 {
+		gesture = negative
+		delta = -delta
+	}
+
+	out := make([]events.DeviceEvent, 0, delta)
+	for i := 0; i < delta; i++ {
+		out = append(out, triggerEvent(report, gesture))
+	}
+	return out
+}
+
+func isHapticPanelPress(decoded decodedReport) bool {
+	return decoded.buttons == 0 &&
+		decoded.deltaX == 1 &&
+		decoded.deltaY == 0 &&
+		decoded.wheel == 0 &&
+		decoded.thumbWheel == 0
+}
+
+func modeGesture(freeSpin bool) string {
+	if freeSpin {
+		return "wheel_mode_free_spin"
+	}
+	return "wheel_mode_ratchet"
 }

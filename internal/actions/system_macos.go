@@ -21,6 +21,12 @@ func (r MacOSSystemRunner) Run(ctx context.Context, action string) error {
 		return r.ShortcutEmitter.Emit(ctx, []string{"ctrl", "up"})
 	case "app_expose":
 		return r.ShortcutEmitter.Emit(ctx, []string{"ctrl", "down"})
+	case "next_desktop":
+		return r.ShortcutEmitter.Emit(ctx, []string{"ctrl", "right"})
+	case "previous_desktop":
+		return r.ShortcutEmitter.Emit(ctx, []string{"ctrl", "left"})
+	case "show_desktop":
+		return r.ShortcutEmitter.Emit(ctx, []string{"f11"})
 	case "launchpad":
 		return r.ShortcutEmitter.Emit(ctx, []string{"f4"})
 	default:

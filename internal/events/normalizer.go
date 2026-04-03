@@ -2,7 +2,7 @@ package events
 
 import "fmt"
 
-const defaultGestureDistance = 256
+const defaultGestureDistance = 32
 
 type NormalizeConfig struct {
 	GestureDistance int
@@ -69,12 +69,11 @@ func (n *Normalizer) Push(event DeviceEvent) []DeviceEvent {
 		n.accumulatedY += event.DeltaY
 
 		if !n.gestureEmitted &&
-			abs(n.accumulatedY) >= n.cfg.GestureDistance &&
-			abs(n.accumulatedY) >= abs(n.accumulatedX) {
+			maxAbs(n.accumulatedX, n.accumulatedY) >= n.cfg.GestureDistance {
 			n.gestureEmitted = true
-			direction := "down"
-			if n.accumulatedY < 0 {
-				direction = "up"
+			direction := gestureDirection(n.accumulatedX, n.accumulatedY)
+			if direction == "" {
+				return out
 			}
 			out = append(out, DeviceEvent{
 				DeviceID: event.DeviceID,
@@ -99,4 +98,30 @@ func abs(value int) int {
 		return -value
 	}
 	return value
+}
+
+func maxAbs(x, y int) int {
+	if abs(x) > abs(y) {
+		return abs(x)
+	}
+	return abs(y)
+}
+
+func gestureDirection(x, y int) string {
+	switch {
+	case y > 0 && abs(y) >= abs(x):
+		return "down"
+	case y < 0 && x > 0:
+		return "left"
+	case y < 0 && x < 0:
+		return "right"
+	case y < 0:
+		return "up"
+	case x > 0:
+		return "right"
+	case x < 0:
+		return "left"
+	default:
+		return ""
+	}
 }

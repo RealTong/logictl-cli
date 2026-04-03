@@ -3,9 +3,11 @@ package daemon
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/realtong/logi-cli/internal/config"
 	"github.com/realtong/logi-cli/internal/events"
+	platformmacos "github.com/realtong/logi-cli/internal/platform/macos"
 	"github.com/realtong/logi-cli/internal/rules"
 )
 
@@ -59,6 +61,30 @@ func (r fakeActiveAppResolver) ActiveBundleID(context.Context) (string, error) {
 	return r.bundleID, nil
 }
 
+type fakeScrollRewriter struct {
+	records []scrollRewriteRecord
+}
+
+type scrollRewriteRecord struct {
+	deviceID string
+	gesture  string
+	settings config.ScrollConfig
+	at       time.Time
+}
+
+func (f *fakeScrollRewriter) Start(context.Context) error {
+	return nil
+}
+
+func (f *fakeScrollRewriter) Record(deviceID, gesture string, settings config.ScrollConfig, at time.Time) {
+	f.records = append(f.records, scrollRewriteRecord{
+		deviceID: deviceID,
+		gesture:  gesture,
+		settings: settings,
+		at:       at,
+	})
+}
+
 func TestRuntimeApplyConfigWithoutRestart(t *testing.T) {
 	runtime := NewRuntimeWithDependencies(RuntimeDependencies{})
 	if err := runtime.ApplyConfig(sampleRuntimeConfig("global")); err != nil {
@@ -83,7 +109,7 @@ func TestRuntimeDispatchesMatchedAction(t *testing.T) {
 	}
 	executor := &fakeExecutor{}
 	runtime := NewRuntimeWithDependencies(RuntimeDependencies{
-		Source:      fakeEventSource{events: []events.DeviceEvent{{DeviceID: "mx-master-4", Gesture: "hold(thumb_button)+move(down)"}}},
+		Source:      fakeEventSource{events: []events.DeviceEvent{{DeviceID: "mx-master-4", Gesture: "hold(gesture_button)+move(down)"}}},
 		Matcher:     matcher,
 		Executor:    executor,
 		AppResolver: fakeActiveAppResolver{bundleID: "com.google.Chrome"},
@@ -99,6 +125,60 @@ func TestRuntimeDispatchesMatchedAction(t *testing.T) {
 		t.Fatalf("len(executor.actions) = %d, want 1", got)
 	}
 }
+
+func TestRuntimeApplyConfigBuildsScrollSettings(t *testing.T) {
+	runtime := NewRuntimeWithDependencies(RuntimeDependencies{})
+	cfg := sampleRuntimeConfig("global")
+	cfg.Devices[0].Scroll.Direction = "natural"
+	cfg.Devices[0].Scroll.SmoothScroll = false
+
+	if err := runtime.ApplyConfig(cfg); err != nil {
+		t.Fatalf("ApplyConfig returned error: %v", err)
+	}
+
+	settings := runtime.ScrollSettings("mx-master-4")
+	if settings.Direction != "natural" || settings.SmoothScroll {
+		t.Fatalf("settings = %#v, want natural + smooth false", settings)
+	}
+}
+
+func TestRuntimeRecordsWheelGesturesForScrollRewrite(t *testing.T) {
+	rewriter := &fakeScrollRewriter{}
+	runtime := NewRuntimeWithDependencies(RuntimeDependencies{
+		Source: fakeEventSource{events: []events.DeviceEvent{
+			{DeviceID: "mx-master-4", Gesture: "wheel_up", At: time.Unix(1, 0)},
+		}},
+		Matcher:        &fakeMatcher{err: rules.ErrNoBinding},
+		Executor:       &fakeExecutor{},
+		AppResolver:    fakeActiveAppResolver{bundleID: "com.apple.finder"},
+		ScrollRewriter: rewriter,
+	})
+
+	cfg := sampleRuntimeConfig("global")
+	cfg.Devices[0].Scroll = config.ScrollConfig{
+		Direction:    "standard",
+		SmoothScroll: true,
+	}
+	if err := runtime.ApplyConfig(cfg); err != nil {
+		t.Fatalf("ApplyConfig returned error: %v", err)
+	}
+
+	if err := runtime.Run(context.Background()); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	if len(rewriter.records) != 1 {
+		t.Fatalf("len(rewriter.records) = %d, want 1", len(rewriter.records))
+	}
+	if got, want := rewriter.records[0].settings, (config.ScrollConfig{Direction: "standard", SmoothScroll: true}); got != want {
+		t.Fatalf("rewriter.records[0].settings = %#v, want %#v", got, want)
+	}
+	if got, want := rewriter.records[0].gesture, "wheel_up"; got != want {
+		t.Fatalf("rewriter.records[0].gesture = %q, want %q", got, want)
+	}
+}
+
+var _ platformmacos.ScrollRewriter = (*fakeScrollRewriter)(nil)
 
 func sampleRuntimeConfig(profileID string) *config.Config {
 	return &config.Config{
@@ -119,7 +199,7 @@ func sampleRuntimeConfig(profileID string) *config.Config {
 				Bindings: []config.Binding{
 					{
 						Device:  "mx-master-4",
-						Trigger: "hold(thumb_button)+move(down)",
+						Trigger: "hold(gesture_button)+move(down)",
 						Action:  "close_tab",
 					},
 				},

@@ -12,8 +12,12 @@
 ## MX Master 4 Semantic Capture
 
 1. Run `go run ./cmd/logi test event --path '<mx-master-4-path>'`
-2. Press the thumb button once. Confirm `thumb_button_down` and `thumb_button_up` appear.
-3. Hold the thumb button, move the mouse down, then release. Confirm `thumb_button_hold` and `hold(thumb_button)+move(down)` appear.
+2. Press the gesture button once. Confirm `gesture_button_down` and `gesture_button_up` appear.
+3. Hold the gesture button, move the mouse down, then release. Confirm `gesture_button_hold` and `hold(gesture_button)+move(down)` appear.
+4. Press the back and forward buttons. Confirm `back_button_down/up` and `forward_button_down/up` appear.
+5. Spin the main wheel and thumb wheel. Confirm `wheel_up/down` and `thumb_wheel_left/right` appear.
+6. Press the wheel mode-shift button. Confirm `mode_shift_button_press` plus either `wheel_mode_ratchet` or `wheel_mode_free_spin` appear.
+7. Press the haptic panel. Confirm `haptic_panel_press` appears.
 
 ## Daemon Control Plane
 
@@ -22,6 +26,9 @@
 3. Confirm the output is `running`
 4. In the second terminal, run `go run ./cmd/logi reload`
 5. Confirm the output is `reload requested`
+6. With `devices.scroll.direction = "standard"`, confirm the main wheel and thumb wheel now move in the Windows-style direction while the daemon is running.
+7. Flip `devices.scroll.direction` back to `"natural"`, run `go run ./cmd/logi reload`, and confirm the native macOS direction returns.
+8. Toggle `devices.scroll.smooth_scroll` between `true` and `false`, reload, and confirm scrolling switches between short smooth bursts and line-like ticks.
 
 ## LaunchAgent
 

@@ -61,7 +61,8 @@ func NewApp(paths appcore.Paths) *App {
 				SystemRunner:    actions.MacOSSystemRunner{ShortcutEmitter: shortcutEmitter},
 				ScriptRunner:    actions.CommandScriptRunner{},
 			},
-			ConfigPath: paths.ConfigFile,
+			ScrollRewriter: platformmacos.NewScrollRewriter(),
+			ConfigPath:     paths.ConfigFile,
 		}),
 	}
 }

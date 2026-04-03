@@ -8,17 +8,17 @@ import (
 
 func TestTriggerForEventPrefersGesture(t *testing.T) {
 	event := events.DeviceEvent{
-		Control: "thumb_button",
+		Control: "gesture_button",
 		Kind:    events.ButtonDown,
-		Gesture: "hold(thumb_button)+move(down)",
+		Gesture: "hold(gesture_button)+move(down)",
 	}
 
 	got, ok := triggerForEvent(event)
 	if !ok {
 		t.Fatal("triggerForEvent() reported no trigger, want gesture trigger")
 	}
-	if got != "hold(thumb_button)+move(down)" {
-		t.Fatalf("triggerForEvent() = %q, want hold(thumb_button)+move(down)", got)
+	if got != "hold(gesture_button)+move(down)" {
+		t.Fatalf("triggerForEvent() = %q, want hold(gesture_button)+move(down)", got)
 	}
 }
 
@@ -31,26 +31,26 @@ func TestTriggerForEventFormatsButtonKinds(t *testing.T) {
 		{
 			name: "button down",
 			event: events.DeviceEvent{
-				Control: "thumb_button",
+				Control: "gesture_button",
 				Kind:    events.ButtonDown,
 			},
-			want: "thumb_button_down",
+			want: "gesture_button_down",
 		},
 		{
 			name: "button hold",
 			event: events.DeviceEvent{
-				Control: "thumb_button",
+				Control: "gesture_button",
 				Kind:    events.ButtonHold,
 			},
-			want: "thumb_button_hold",
+			want: "gesture_button_hold",
 		},
 		{
 			name: "button up",
 			event: events.DeviceEvent{
-				Control: "thumb_button",
+				Control: "gesture_button",
 				Kind:    events.ButtonUp,
 			},
-			want: "thumb_button_up",
+			want: "gesture_button_up",
 		},
 	}
 

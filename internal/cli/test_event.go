@@ -108,7 +108,7 @@ func streamSemanticEvents(ctx context.Context, source rawSource, out io.Writer, 
 				continue
 			}
 
-			event, err := adapter.Decode(report)
+			decoded, err := adapter.Decode(report)
 			if err != nil {
 				if errors.Is(err, mxmaster4.ErrUnsupportedReport) {
 					if writeErr := writeWarningOnce(writer, reportedWarnings, semanticWarningKey("unsupported", err), formatUnsupportedSemanticReport(report, err)); writeErr != nil {
@@ -121,13 +121,11 @@ func streamSemanticEvents(ctx context.Context, source rawSource, out io.Writer, 
 				}
 				continue
 			}
-			if event.Kind == "" && event.Gesture == "" && event.Control == "" {
-				continue
-			}
-
-			for _, normalized := range normalizer.Push(event) {
-				if _, err := fmt.Fprintln(writer, events.FormatDeviceEvent(normalized)); err != nil {
-					return err
+			for _, event := range decoded {
+				for _, normalized := range normalizer.Push(event) {
+					if _, err := fmt.Fprintln(writer, events.FormatDeviceEvent(normalized)); err != nil {
+						return err
+					}
 				}
 			}
 		case err, ok := <-errs:

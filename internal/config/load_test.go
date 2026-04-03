@@ -22,8 +22,14 @@ func TestLoadFileValidFixture(t *testing.T) {
 	if got, want := device.MatchVendorID, 1133; got != want {
 		t.Fatalf("device.MatchVendorID = %d, want %d", got, want)
 	}
-	if got, want := device.Capabilities["thumb_button"], "button_5"; got != want {
-		t.Fatalf("device.Capabilities[thumb_button] = %q, want %q", got, want)
+	if got, want := device.Scroll.Direction, "standard"; got != want {
+		t.Fatalf("device.Scroll.Direction = %q, want %q", got, want)
+	}
+	if !device.Scroll.SmoothScroll {
+		t.Fatal("device.Scroll.SmoothScroll = false, want true")
+	}
+	if got, want := device.Capabilities["gesture_button"], "gesture_button"; got != want {
+		t.Fatalf("device.Capabilities[gesture_button] = %q, want %q", got, want)
 	}
 
 	if got, want := len(cfg.Actions), 3; got != want {

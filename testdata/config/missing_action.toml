@@ -17,5 +17,5 @@ app_bundle_id = "com.google.Chrome"
 
   [[profiles.bindings]]
   device = "mx-master-4"
-  trigger = "hold(thumb_button)+move(down)"
+  trigger = "hold(gesture_button)+move(down)"
   action = "missing_action"

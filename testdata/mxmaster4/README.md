@@ -1,8 +1,8 @@
 MX Master 4 raw HID report fixtures captured from a real Bluetooth device.
 
 Capture source files:
-- `/tmp/logi-thumb-button-down.txt`
-- `/tmp/logi-thumb-button-hold-move-down.txt`
+- `/tmp/logi-gesture-button-down.txt`
+- `/tmp/logi-gesture-button-hold-move-down.txt`
 
 Hardware context:
 - Path: `DevSrvsID:4295271338`
@@ -12,9 +12,10 @@ Hardware context:
 - Transport: `Bluetooth`
 
 Known-good evidence in this task:
-- `thumb-button-down.txt` contains a thumb-button press sequence.
-- `thumb-button-hold-move-down.txt` contains a thumb-button hold with downward movement and a later release.
+- Historical fixture files `thumb-button-down.txt` and `thumb-button-hold-move-down.txt`
+  were originally captured for the same physical control and should now be read as
+  `gesture_button` samples.
 
 Known limits:
-- These fixtures are only sufficient to confidently cover thumb-button down, hold, and hold-plus-move-down behavior.
+- These fixtures are only sufficient to confidently cover gesture-button down, hold, and hold-plus-move-down behavior.
 - Other button states or gesture directions should not be inferred without more captures.

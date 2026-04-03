@@ -9,45 +9,102 @@ import (
 )
 
 const (
-	reportID           = 0x02
-	thumbButtonPressed = 0x40
+	reportIDStandard = 0x02
+	reportIDMode     = 0x11
+
+	buttonMaskLeft    = 0x01
+	buttonMaskRight   = 0x02
+	buttonMaskMiddle  = 0x04
+	buttonMaskBack    = 0x08
+	buttonMaskForward = 0x10
+	buttonMaskGesture = 0x20
+	knownButtonMask   = buttonMaskLeft | buttonMaskRight | buttonMaskMiddle | buttonMaskBack | buttonMaskForward | buttonMaskGesture
 )
 
 var ErrUnsupportedReport = errors.New("unsupported mx master 4 report")
 
-func Decode(report events.RawReport) (events.DeviceEvent, error) {
-	state, deltaX, deltaY, err := decodeReport(report)
-	if err != nil {
-		return events.DeviceEvent{}, err
-	}
-	if state != thumbButtonPressed {
-		return events.DeviceEvent{}, unsupportedReportError(state)
-	}
-	if deltaX == 0 && deltaY == 0 {
-		return buttonEvent(report, events.ButtonDown), nil
-	}
-	return pointerMoveEvent(report, deltaX, deltaY), nil
+type reportKind int
+
+const (
+	standardReport reportKind = iota
+	modeReport
+)
+
+type decodedReport struct {
+	kind         reportKind
+	buttons      byte
+	deltaX       int
+	deltaY       int
+	wheel        int
+	thumbWheel   int
+	modeFreeSpin bool
 }
 
-func decodeReport(report events.RawReport) (byte, int, int, error) {
-	if len(report.Bytes) < 6 {
-		return 0, 0, 0, fmt.Errorf("mx master 4 report too short: %d", len(report.Bytes))
-	}
-	if report.Bytes[0] != reportID {
-		return 0, 0, 0, fmt.Errorf("mx master 4 unsupported report id: 0x%02x", report.Bytes[0])
-	}
-
-	state := report.Bytes[1]
-	deltaX := int(int8(report.Bytes[3]))
-	deltaY := int(int16(binary.LittleEndian.Uint16(report.Bytes[4:6])))
-	return state, deltaX, deltaY, nil
+type buttonSpec struct {
+	mask    byte
+	control string
 }
 
-func buttonEvent(report events.RawReport, kind events.EventKind) events.DeviceEvent {
+var buttonSpecs = []buttonSpec{
+	{mask: buttonMaskLeft, control: "left_button"},
+	{mask: buttonMaskRight, control: "right_button"},
+	{mask: buttonMaskMiddle, control: "middle_button"},
+	{mask: buttonMaskBack, control: "back_button"},
+	{mask: buttonMaskForward, control: "forward_button"},
+	{mask: buttonMaskGesture, control: "gesture_button"},
+}
+
+func Decode(report events.RawReport) ([]events.DeviceEvent, error) {
+	adapter := Adapter{}
+	return adapter.Decode(report)
+}
+
+func decodeReport(report events.RawReport) (decodedReport, error) {
+	if len(report.Bytes) == 0 {
+		return decodedReport{}, fmt.Errorf("mx master 4 report too short: %d", len(report.Bytes))
+	}
+
+	switch report.Bytes[0] {
+	case reportIDStandard:
+		if len(report.Bytes) < 8 {
+			return decodedReport{}, fmt.Errorf("mx master 4 report too short: %d", len(report.Bytes))
+		}
+
+		buttons := report.Bytes[1]
+		if buttons&^knownButtonMask != 0 {
+			return decodedReport{}, unsupportedReportError(buttons)
+		}
+
+		return decodedReport{
+			kind:       standardReport,
+			buttons:    buttons,
+			deltaX:     int(int8(report.Bytes[3])),
+			deltaY:     int(int16(binary.LittleEndian.Uint16(report.Bytes[4:6]))),
+			wheel:      int(int8(report.Bytes[6])),
+			thumbWheel: int(int8(report.Bytes[7])),
+		}, nil
+	case reportIDMode:
+		if len(report.Bytes) < 5 {
+			return decodedReport{}, fmt.Errorf("mx master 4 mode report too short: %d", len(report.Bytes))
+		}
+		if len(report.Bytes) < 4 || report.Bytes[1] != 0xff || report.Bytes[2] != 0x12 || report.Bytes[3] != 0x10 {
+			return decodedReport{}, fmt.Errorf("%w: mode payload=% x", ErrUnsupportedReport, report.Bytes[1:])
+		}
+
+		return decodedReport{
+			kind:         modeReport,
+			modeFreeSpin: report.Bytes[4] == 0x01,
+		}, nil
+	default:
+		return decodedReport{}, fmt.Errorf("mx master 4 unsupported report id: 0x%02x", report.Bytes[0])
+	}
+}
+
+func buttonEvent(report events.RawReport, control string, kind events.EventKind) events.DeviceEvent {
 	return events.DeviceEvent{
 		DeviceID: report.DeviceID,
 		At:       report.At,
-		Control:  "thumb_button",
+		Control:  control,
 		Kind:     kind,
 	}
 }
@@ -60,6 +117,15 @@ func pointerMoveEvent(report events.RawReport, deltaX, deltaY int) events.Device
 		Kind:     events.PointerMove,
 		DeltaX:   deltaX,
 		DeltaY:   deltaY,
+	}
+}
+
+func triggerEvent(report events.RawReport, gesture string) events.DeviceEvent {
+	return events.DeviceEvent{
+		DeviceID: report.DeviceID,
+		At:       report.At,
+		Kind:     events.Gesture,
+		Gesture:  gesture,
 	}
 }
 

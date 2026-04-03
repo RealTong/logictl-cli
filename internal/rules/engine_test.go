@@ -13,7 +13,7 @@ func TestMatchPrefersDeviceAndAppSpecificBinding(t *testing.T) {
 	engine := NewEngine(sampleConfig())
 	event := events.DeviceEvent{
 		DeviceID: "mx-master-4",
-		Gesture:  "hold(thumb_button)+move(down)",
+		Gesture:  "hold(gesture_button)+move(down)",
 	}
 
 	action, err := engine.Match(Context{AppBundleID: "com.google.Chrome"}, event)
@@ -33,7 +33,7 @@ func TestMatchPrefersDeviceGlobalBindingOverAnyDeviceAppBinding(t *testing.T) {
 			Bindings: []config.Binding{
 				{
 					Device:  "mx-master-4",
-					Trigger: "hold(thumb_button)+move(down)",
+					Trigger: "hold(gesture_button)+move(down)",
 					Action:  "device_global",
 				},
 			},
@@ -43,7 +43,7 @@ func TestMatchPrefersDeviceGlobalBindingOverAnyDeviceAppBinding(t *testing.T) {
 			AppBundleID: "com.google.Chrome",
 			Bindings: []config.Binding{
 				{
-					Trigger: "hold(thumb_button)+move(down)",
+					Trigger: "hold(gesture_button)+move(down)",
 					Action:  "app_specific",
 				},
 			},
@@ -57,7 +57,7 @@ func TestMatchPrefersDeviceGlobalBindingOverAnyDeviceAppBinding(t *testing.T) {
 	engine := NewEngine(cfg)
 	action, err := engine.Match(Context{AppBundleID: "com.google.Chrome"}, events.DeviceEvent{
 		DeviceID: "mx-master-4",
-		Gesture:  "hold(thumb_button)+move(down)",
+		Gesture:  "hold(gesture_button)+move(down)",
 	})
 	if err != nil {
 		t.Fatalf("Match returned error: %v", err)
@@ -78,13 +78,13 @@ func TestMatchUsesHigherPriorityWithinSameSpecificity(t *testing.T) {
 			Bindings: []config.Binding{
 				{
 					Device:   "mx-master-4",
-					Trigger:  "hold(thumb_button)+move(down)",
+					Trigger:  "hold(gesture_button)+move(down)",
 					Action:   "close_tab",
 					Priority: &low,
 				},
 				{
 					Device:   "mx-master-4",
-					Trigger:  "hold(thumb_button)+move(down)",
+					Trigger:  "hold(gesture_button)+move(down)",
 					Action:   "mission_control",
 					Priority: &high,
 				},
@@ -95,7 +95,7 @@ func TestMatchUsesHigherPriorityWithinSameSpecificity(t *testing.T) {
 	engine := NewEngine(cfg)
 	action, err := engine.Match(Context{AppBundleID: "com.google.Chrome"}, events.DeviceEvent{
 		DeviceID: "mx-master-4",
-		Gesture:  "hold(thumb_button)+move(down)",
+		Gesture:  "hold(gesture_button)+move(down)",
 	})
 	if err != nil {
 		t.Fatalf("Match returned error: %v", err)
@@ -115,13 +115,13 @@ func TestMatchRejectsAmbiguousTopRank(t *testing.T) {
 			Bindings: []config.Binding{
 				{
 					Device:   "mx-master-4",
-					Trigger:  "hold(thumb_button)+move(down)",
+					Trigger:  "hold(gesture_button)+move(down)",
 					Action:   "close_tab",
 					Priority: &priority,
 				},
 				{
 					Device:   "mx-master-4",
-					Trigger:  "hold(thumb_button)+move(down)",
+					Trigger:  "hold(gesture_button)+move(down)",
 					Action:   "mission_control",
 					Priority: &priority,
 				},
@@ -132,7 +132,7 @@ func TestMatchRejectsAmbiguousTopRank(t *testing.T) {
 	engine := NewEngine(cfg)
 	_, err := engine.Match(Context{AppBundleID: "com.google.Chrome"}, events.DeviceEvent{
 		DeviceID: "mx-master-4",
-		Gesture:  "hold(thumb_button)+move(down)",
+		Gesture:  "hold(gesture_button)+move(down)",
 	})
 	if err == nil {
 		t.Fatal("Match returned nil error, want ambiguity error")
@@ -146,7 +146,7 @@ func TestMatchReturnsNoBindingForUnknownTrigger(t *testing.T) {
 	engine := NewEngine(sampleConfig())
 	_, err := engine.Match(Context{AppBundleID: "com.google.Chrome"}, events.DeviceEvent{
 		DeviceID: "mx-master-4",
-		Gesture:  "hold(thumb_button)+move(left)",
+		Gesture:  "hold(gesture_button)+move(left)",
 	})
 	if err == nil {
 		t.Fatal("Match returned nil error, want no-match error")
@@ -168,7 +168,7 @@ func TestMatchLoadsValidFixtureConfig(t *testing.T) {
 	engine := NewEngine(cfg)
 	action, err := engine.Match(Context{AppBundleID: "com.google.Chrome"}, events.DeviceEvent{
 		DeviceID: "mx-master-4",
-		Gesture:  "hold(thumb_button)+move(down)",
+		Gesture:  "hold(gesture_button)+move(down)",
 	})
 	if err != nil {
 		t.Fatalf("Match returned error: %v", err)
@@ -200,11 +200,11 @@ func sampleConfig() *config.Config {
 				Bindings: []config.Binding{
 					{
 						Device:  "mx-master-4",
-						Trigger: "hold(thumb_button)+move(down)",
+						Trigger: "hold(gesture_button)+move(down)",
 						Action:  "mission_control",
 					},
 					{
-						Trigger: "hold(thumb_button)+move(down)",
+						Trigger: "hold(gesture_button)+move(down)",
 						Action:  "launchpad",
 					},
 				},
@@ -215,7 +215,7 @@ func sampleConfig() *config.Config {
 				Bindings: []config.Binding{
 					{
 						Device:  "mx-master-4",
-						Trigger: "hold(thumb_button)+move(down)",
+						Trigger: "hold(gesture_button)+move(down)",
 						Action:  "close_tab",
 					},
 				},

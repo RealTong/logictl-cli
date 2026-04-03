@@ -83,10 +83,10 @@ Responsibilities:
 
 Example normalized events:
 
-- `thumb_button_down`
-- `thumb_button_hold`
+- `gesture_button_down`
+- `gesture_button_hold`
 - `horizontal_wheel_left`
-- `gesture(thumb_button, down)`
+- `gesture(gesture_button, down)`
 
 This layer owns timing thresholds and motion interpretation rules.
 
@@ -156,7 +156,7 @@ Suggested fields:
 - vendor ID
 - product ID
 - transport hints if needed
-- capability aliases such as `thumb_button`, `gesture_button`, `wheel_left`, `wheel_right`
+- capability aliases such as `gesture_button`, `gesture_button`, `wheel_left`, `wheel_right`
 
 The rule engine should depend on these aliases, not on report bytes.
 
@@ -223,7 +223,7 @@ match_vendor_id = 1133
 match_product_id = 0
 
 [devices.capabilities]
-thumb_button = "button_5"
+gesture_button = "button_5"
 wheel_left = "hscroll_left"
 wheel_right = "hscroll_right"
 
@@ -238,7 +238,7 @@ app_bundle_id = "com.google.Chrome"
 
 [[profiles.bindings]]
 device = "mx-master-4"
-trigger = "hold(thumb_button)+move(down)"
+trigger = "hold(gesture_button)+move(down)"
 action = "close_tab"
 ```
 

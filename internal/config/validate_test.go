@@ -13,8 +13,12 @@ func validConfigForValidationTests() *Config {
 				ID:             "mx-master-4",
 				MatchVendorID:  1133,
 				MatchProductID: 1234,
+				Scroll: ScrollConfig{
+					Direction:    "standard",
+					SmoothScroll: true,
+				},
 				Capabilities: map[string]string{
-					"thumb_button": "button_5",
+					"gesture_button": "gesture_button",
 				},
 			},
 		},
@@ -32,7 +36,7 @@ func validConfigForValidationTests() *Config {
 				Bindings: []Binding{
 					{
 						Device:  "mx-master-4",
-						Trigger: "hold(thumb_button)+move(down)",
+						Trigger: "hold(gesture_button)+move(down)",
 						Action:  "close_tab",
 					},
 				},
@@ -99,6 +103,19 @@ func TestValidateRejectsUnknownDeviceReferences(t *testing.T) {
 
 	if err := Validate(cfg); err == nil {
 		t.Fatal("Validate returned nil, want unknown device reference error")
+	}
+}
+
+func TestValidateRejectsInvalidScrollDirection(t *testing.T) {
+	cfg := validConfigForValidationTests()
+	cfg.Devices[0].Scroll.Direction = "backwards"
+
+	err := Validate(cfg)
+	if err == nil {
+		t.Fatal("Validate returned nil, want invalid scroll direction error")
+	}
+	if !strings.Contains(err.Error(), "scroll direction") {
+		t.Fatalf("Validate error = %v, want scroll direction guidance", err)
 	}
 }
 

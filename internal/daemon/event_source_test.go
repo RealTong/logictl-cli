@@ -130,11 +130,11 @@ func TestMXMaster4EventSourceStreamUsesNativePassiveCaptureForSharedPrimaryPoint
 		reports: []events.RawReport{
 			{
 				At:    time.Unix(1, 0),
-				Bytes: []byte{0x02, 0x40, 0x00, 0x00, 0x00, 0x00},
+				Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			},
 			{
 				At:    time.Unix(2, 0),
-				Bytes: []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00},
+				Bytes: []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			},
 		},
 	}
@@ -183,11 +183,11 @@ func TestMXMaster4EventSourceStreamUsesNativePassiveCaptureForSharedPrimaryPoint
 	if len(got) != 2 {
 		t.Fatalf("Stream() produced %d events, want 2", len(got))
 	}
-	if got[0].Control != "thumb_button" || got[0].Kind != events.ButtonDown {
-		t.Fatalf("first event = %#v, want thumb button down", got[0])
+	if got[0].Control != "gesture_button" || got[0].Kind != events.ButtonDown {
+		t.Fatalf("first event = %#v, want gesture button down", got[0])
 	}
-	if got[1].Control != "thumb_button" || got[1].Kind != events.ButtonUp {
-		t.Fatalf("second event = %#v, want thumb button up", got[1])
+	if got[1].Control != "gesture_button" || got[1].Kind != events.ButtonUp {
+		t.Fatalf("second event = %#v, want gesture button up", got[1])
 	}
 	if nativeFactory.openSpec.UsagePage != 0x0001 || nativeFactory.openSpec.Usage != 0x0002 {
 		t.Fatalf("Open() spec = %#v, want primary mouse usage", nativeFactory.openSpec)

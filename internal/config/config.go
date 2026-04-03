@@ -15,7 +15,13 @@ type Device struct {
 	ID             string            `toml:"id"`
 	MatchVendorID  int               `toml:"match_vendor_id"`
 	MatchProductID int               `toml:"match_product_id"`
+	Scroll         ScrollConfig      `toml:"scroll"`
 	Capabilities   map[string]string `toml:"capabilities"`
+}
+
+type ScrollConfig struct {
+	Direction    string `toml:"direction"`
+	SmoothScroll bool   `toml:"smooth_scroll"`
 }
 
 type Action struct {
