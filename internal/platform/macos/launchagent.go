@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	appcore "github.com/realtong/logi-cli/internal/app"
+	appcore "github.com/realtong/logictl-cli/internal/app"
 )
 
-const launchAgentLabel = "io.realtong.logi-cli"
+const launchAgentLabel = "io.realtong.logictl"
 
 var runLaunchctl = func(ctx context.Context, args ...string) error {
 	return exec.CommandContext(ctx, "launchctl", args...).Run()
@@ -106,9 +106,9 @@ func renderLaunchAgentPlist(paths appcore.Paths, binary string) string {
 	<string>%s</string>
 	<key>EnvironmentVariables</key>
 	<dict>
-		<key>LOGI_CONFIG_FILE</key>
+		<key>LOGICTL_CONFIG_FILE</key>
 		<string>%s</string>
-		<key>LOGI_SOCKET_FILE</key>
+		<key>LOGICTL_SOCKET_FILE</key>
 		<string>%s</string>
 	</dict>
 	<key>StandardOutPath</key>

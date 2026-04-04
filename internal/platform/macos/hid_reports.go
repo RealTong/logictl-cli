@@ -1,6 +1,6 @@
 package macos
 
-import "github.com/realtong/logi-cli/internal/events"
+import "github.com/realtong/logictl-cli/internal/events"
 
 type HIDReportMatch struct {
 	VendorID     uint16

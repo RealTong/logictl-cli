@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/realtong/logi-cli/internal/events"
-	"github.com/realtong/logi-cli/internal/hidapi"
+	"github.com/realtong/logictl-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/hidapi"
 )
 
 type fakeNativeSourceFactory struct {

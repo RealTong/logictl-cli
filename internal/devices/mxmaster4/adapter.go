@@ -3,8 +3,8 @@ package mxmaster4
 import (
 	"strings"
 
-	"github.com/realtong/logi-cli/internal/events"
-	"github.com/realtong/logi-cli/internal/hidapi"
+	"github.com/realtong/logictl-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/hidapi"
 )
 
 const productID = 0xb042

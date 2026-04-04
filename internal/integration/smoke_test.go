@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/realtong/logi-cli/internal/config"
-	"github.com/realtong/logi-cli/internal/daemon"
+	"github.com/realtong/logictl-cli/internal/config"
+	"github.com/realtong/logictl-cli/internal/daemon"
 )
 
 func TestSmokeConfigParsesAndBuildsRuntime(t *testing.T) {

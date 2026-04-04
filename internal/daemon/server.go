@@ -7,7 +7,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/realtong/logi-cli/internal/ipc"
+	"github.com/realtong/logictl-cli/internal/ipc"
 )
 
 type controller interface {

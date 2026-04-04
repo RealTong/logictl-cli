@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	appcore "github.com/realtong/logi-cli/internal/app"
-	"github.com/realtong/logi-cli/internal/daemon"
-	"github.com/realtong/logi-cli/internal/ipc"
+	appcore "github.com/realtong/logictl-cli/internal/app"
+	"github.com/realtong/logictl-cli/internal/daemon"
+	"github.com/realtong/logictl-cli/internal/ipc"
 )
 
 type fakeDaemonPreflight struct {
@@ -30,7 +30,7 @@ type fakeDaemonServiceManager struct {
 
 func (m *fakeDaemonServiceManager) Install(context.Context) (string, error) {
 	m.calls = append(m.calls, "install")
-	return "/tmp/logi-launchagent", nil
+	return "/tmp/logictl-daemon", nil
 }
 
 func (m *fakeDaemonServiceManager) Start(context.Context) error {
@@ -76,7 +76,7 @@ func TestDaemonInstallCmdInvokesServiceManager(t *testing.T) {
 	if len(manager.calls) != 1 || manager.calls[0] != "install" {
 		t.Fatalf("manager.calls = %#v, want [install]", manager.calls)
 	}
-	if got := buf.String(); !strings.Contains(got, "/tmp/logi-launchagent") {
+	if got := buf.String(); !strings.Contains(got, "/tmp/logictl-daemon") {
 		t.Fatalf("output = %q, want installed path", got)
 	}
 }
@@ -119,7 +119,7 @@ func TestStageLaunchAgentBinaryCopiesExecutableIntoStableStatePath(t *testing.T)
 		t.Fatalf("MkdirAll(%q) returned error: %v", sourceDir, err)
 	}
 
-	source := filepath.Join(sourceDir, "logi")
+	source := filepath.Join(sourceDir, "logictl")
 	if err := os.WriteFile(source, []byte("binary"), 0o755); err != nil {
 		t.Fatalf("WriteFile(%q) returned error: %v", source, err)
 	}
@@ -142,7 +142,7 @@ func TestStageLaunchAgentBinaryCopiesExecutableIntoStableStatePath(t *testing.T)
 
 func TestInstallLaunchAgentBinaryCopiesStableExecutableIntoInstalledPath(t *testing.T) {
 	root := t.TempDir()
-	source := filepath.Join(root, "bin", "logi")
+	source := filepath.Join(root, "bin", "logictl")
 	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
 		t.Fatalf("MkdirAll(%q) returned error: %v", filepath.Dir(source), err)
 	}
@@ -176,7 +176,7 @@ func TestResolveInstalledLaunchAgentBinaryReturnsInstalledBinaryPath(t *testing.
 	paths := appcore.Paths{
 		StateDir: filepath.Join(root, "state"),
 	}
-	installed := filepath.Join(paths.StateDir, "logi-launchagent")
+	installed := filepath.Join(paths.StateDir, "logictl-daemon")
 	if err := os.MkdirAll(paths.StateDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll(%q) returned error: %v", paths.StateDir, err)
 	}
@@ -212,7 +212,7 @@ func TestResolveInstalledLaunchAgentBinaryRequiresInstallStep(t *testing.T) {
 }
 
 func TestWaitForDaemonReadyReportsRunningSocket(t *testing.T) {
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("logi-cli-ready-%d.sock", time.Now().UnixNano()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("logictl-ready-%d.sock", time.Now().UnixNano()))
 	t.Cleanup(func() {
 		_ = os.Remove(socketPath)
 	})
@@ -239,7 +239,7 @@ func TestLaunchAgentStartFailureUsesPermissionGuidanceFromDaemonLog(t *testing.T
 		t.Fatalf("MkdirAll(%q) returned error: %v", paths.LogDir, err)
 	}
 
-	stagedBinary := filepath.Join(paths.StateDir, "logi-launchagent")
+	stagedBinary := filepath.Join(paths.StateDir, "logictl-daemon")
 	if err := os.MkdirAll(paths.StateDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll(%q) returned error: %v", paths.StateDir, err)
 	}
@@ -269,8 +269,8 @@ func TestLaunchAgentStartFailureFindsPermissionErrorBeforeCobraUsageTail(t *test
 		t.Fatalf("MkdirAll(%q) returned error: %v", paths.StateDir, err)
 	}
 
-	stagedBinary := filepath.Join(paths.StateDir, "logi-launchagent")
-	logBody := "Error: IOHIDManagerOpen failed for MX Master 4: 0xe00002e2\nUsage:\n  logi daemon run [flags]\n\nFlags:\n  -h, --help   help for run\n"
+	stagedBinary := filepath.Join(paths.StateDir, "logictl-daemon")
+	logBody := "Error: IOHIDManagerOpen failed for MX Master 4: 0xe00002e2\nUsage:\n  logictl daemon run [flags]\n\nFlags:\n  -h, --help   help for run\n"
 	if err := os.WriteFile(filepath.Join(paths.LogDir, "daemon.stderr.log"), []byte(logBody), 0o644); err != nil {
 		t.Fatalf("WriteFile(stderr log) returned error: %v", err)
 	}

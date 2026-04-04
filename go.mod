@@ -1,4 +1,4 @@
-module github.com/realtong/logi-cli
+module github.com/realtong/logictl-cli
 
 go 1.24.0
 

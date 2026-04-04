@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/realtong/logi-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/events"
 )
 
 type unsupportedHIDReportSourceFactory struct{}

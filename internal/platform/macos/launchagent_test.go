@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	appcore "github.com/realtong/logi-cli/internal/app"
+	appcore "github.com/realtong/logictl-cli/internal/app"
 )
 
 func TestInstallLaunchAgentWritesExpectedPlist(t *testing.T) {
 	paths := launchAgentTestPaths(t)
-	binary := "/tmp/logi-cli"
+	binary := "/tmp/logictl-daemon"
 
 	if err := InstallLaunchAgent(paths, binary); err != nil {
 		t.Fatalf("InstallLaunchAgent returned error: %v", err)
@@ -27,6 +27,7 @@ func TestInstallLaunchAgentWritesExpectedPlist(t *testing.T) {
 	got := string(data)
 	for _, want := range []string{
 		binary,
+		"<string>io.realtong.logictl</string>",
 		"<string>daemon</string>",
 		"<string>run</string>",
 		paths.ConfigFile,
@@ -42,7 +43,7 @@ func TestInstallLaunchAgentWritesExpectedPlist(t *testing.T) {
 
 func TestRestartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
 	paths := launchAgentTestPaths(t)
-	binary := "/tmp/logi-cli"
+	binary := "/tmp/logictl-daemon"
 
 	previousRun := runLaunchctl
 	previousUID := currentLaunchctlUID
@@ -77,7 +78,7 @@ func TestRestartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
 
 func TestStartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
 	paths := launchAgentTestPaths(t)
-	binary := "/tmp/logi-cli"
+	binary := "/tmp/logictl-daemon"
 
 	previousRun := runLaunchctl
 	previousUID := currentLaunchctlUID
@@ -112,7 +113,7 @@ func TestStartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
 
 func TestStartLaunchAgentIgnoresBootoutFailureWhenServiceIsAbsent(t *testing.T) {
 	paths := launchAgentTestPaths(t)
-	binary := "/tmp/logi-cli"
+	binary := "/tmp/logictl-daemon"
 
 	previousRun := runLaunchctl
 	previousUID := currentLaunchctlUID
@@ -158,6 +159,6 @@ func launchAgentTestPaths(t *testing.T) appcore.Paths {
 		StateDir:   filepath.Join(base, "state"),
 		LogDir:     filepath.Join(base, "logs"),
 		SocketFile: filepath.Join(base, "state", "daemon.sock"),
-		PlistFile:  filepath.Join(base, "LaunchAgents", "io.realtong.logi-cli.plist"),
+		PlistFile:  filepath.Join(base, "LaunchAgents", "io.realtong.logictl.plist"),
 	}
 }

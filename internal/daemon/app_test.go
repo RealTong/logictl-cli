@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/realtong/logi-cli/internal/ipc"
+	"github.com/realtong/logictl-cli/internal/ipc"
 )
 
 func TestServerStatusEndpoint(t *testing.T) {
@@ -82,7 +82,7 @@ func waitForStatus(t *testing.T, socketPath string) {
 func shortSocketPath(t *testing.T) string {
 	t.Helper()
 
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("logi-daemon-%d.sock", time.Now().UnixNano()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("logictl-daemon-%d.sock", time.Now().UnixNano()))
 	t.Cleanup(func() {
 		_ = os.Remove(socketPath)
 	})

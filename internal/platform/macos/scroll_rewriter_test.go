@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/realtong/logi-cli/internal/config"
+	"github.com/realtong/logictl-cli/internal/config"
 )
 
 func TestScrollMatcherOnlyConsumesRecentMatchingWheelTicks(t *testing.T) {
@@ -15,8 +15,8 @@ func TestScrollMatcherOnlyConsumesRecentMatchingWheelTicks(t *testing.T) {
 	}, time.Unix(1, 0))
 
 	plan, ok := matcher.Match(nativeScrollEvent{
-		VerticalLine:  1,
-		VerticalPoint: 12,
+		VerticalLine:  -1,
+		VerticalPoint: -1,
 		At:            time.Unix(1, 10*1e6),
 	})
 	if !ok {
@@ -32,7 +32,7 @@ func TestScrollMatcherOnlyConsumesRecentMatchingWheelTicks(t *testing.T) {
 		t.Fatalf("plan.Emissions[0].Unit = %v, want pixel", plan.Emissions[0].Unit)
 	}
 	if plan.Emissions[0].Vertical >= 0 {
-		t.Fatalf("plan.Emissions[0].Vertical = %d, want inverted negative delta", plan.Emissions[0].Vertical)
+		t.Fatalf("plan.Emissions[0].Vertical = %d, want standard wheel_up to emit negative delta independent of native sign noise", plan.Emissions[0].Vertical)
 	}
 }
 
@@ -76,5 +76,37 @@ func TestScrollMatcherKeepsHorizontalAndVerticalIndependent(t *testing.T) {
 	}
 	if plan.Emissions[0].Horizontal == 0 {
 		t.Fatalf("plan.Emissions[0] = %#v, want non-zero horizontal delta", plan.Emissions[0])
+	}
+}
+
+func TestScrollMatcherSuppressesFollowUpBurstAfterFirstEmission(t *testing.T) {
+	matcher := newScrollMatcher(50 * time.Millisecond)
+	matcher.Record("mx-master-4", "wheel_down", config.ScrollConfig{
+		Direction:    "natural",
+		SmoothScroll: true,
+	}, time.Unix(1, 0))
+
+	first, ok := matcher.Match(nativeScrollEvent{
+		VerticalLine:  1,
+		VerticalPoint: 1,
+		At:            time.Unix(1, 10*1e6),
+	})
+	if !ok {
+		t.Fatal("first Match returned false, want initial burst event to match")
+	}
+	if got, want := len(first.Emissions), 4; got != want {
+		t.Fatalf("len(first.Emissions) = %d, want %d", got, want)
+	}
+
+	second, ok := matcher.Match(nativeScrollEvent{
+		VerticalLine:  -1,
+		VerticalPoint: -1,
+		At:            time.Unix(1, 20*1e6),
+	})
+	if !ok {
+		t.Fatal("second Match returned false, want follow-up burst to be suppressed")
+	}
+	if len(second.Emissions) != 0 {
+		t.Fatalf("len(second.Emissions) = %d, want 0 for suppressed follow-up burst", len(second.Emissions))
 	}
 }

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/realtong/logi-cli/internal/devices/mxmaster4"
-	"github.com/realtong/logi-cli/internal/events"
-	"github.com/realtong/logi-cli/internal/hidapi"
+	"github.com/realtong/logictl-cli/internal/devices/mxmaster4"
+	"github.com/realtong/logictl-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/hidapi"
 )
 
 const mxMaster4DeviceID = "mx-master-4"

@@ -7,8 +7,8 @@ match_vendor_id = 1133
 match_product_id = 45122
 
   [devices.scroll]
-  direction = "standard"
-  smooth_scroll = true
+  direction = "natural"
+  smooth_scroll = false
 
   [devices.capabilities]
   left_button = "left_button"

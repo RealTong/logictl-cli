@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	appcore "github.com/realtong/logi-cli/internal/app"
-	"github.com/realtong/logi-cli/internal/daemon"
-	"github.com/realtong/logi-cli/internal/ipc"
-	platformmacos "github.com/realtong/logi-cli/internal/platform/macos"
+	appcore "github.com/realtong/logictl-cli/internal/app"
+	"github.com/realtong/logictl-cli/internal/daemon"
+	"github.com/realtong/logictl-cli/internal/ipc"
+	platformmacos "github.com/realtong/logictl-cli/internal/platform/macos"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +43,7 @@ func newDaemonCmd(app *daemon.App) *cobra.Command {
 func newDaemonCmdWithServiceManager(app *daemon.App, manager daemonServiceManager) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "daemon",
-		Short: "Control the logi-cli daemon",
+		Short: "Control the logictl daemon",
 	}
 
 	cmd.AddCommand(newDaemonInstallCmd(manager))
@@ -202,7 +202,7 @@ func (m launchAgentServiceManager) Restart(ctx context.Context) error {
 
 func installLaunchAgentBinary(paths appcore.Paths, binary string) (string, error) {
 	if requiresLaunchAgentStaging(binary) {
-		return "", fmt.Errorf("current executable %q looks like a go run build cache binary; build a stable binary such as ./bin/logi with `go build -o ./bin/logi ./cmd/logi` and run `./bin/logi daemon install`", binary)
+		return "", fmt.Errorf("current executable %q looks like a go run build cache binary; build a stable binary such as ./bin/logictl with `go build -o ./bin/logictl ./cmd/logictl` and run `./bin/logictl daemon install`", binary)
 	}
 
 	if err := os.MkdirAll(paths.StateDir, 0o755); err != nil {
@@ -221,21 +221,21 @@ func resolveInstalledLaunchAgentBinary(paths appcore.Paths) (string, error) {
 	info, err := os.Stat(installedPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return "", fmt.Errorf("no installed daemon binary at %s; build a stable binary with `go build -o ./bin/logi ./cmd/logi`, then run `./bin/logi daemon install`", installedPath)
+			return "", fmt.Errorf("no installed daemon binary at %s; build a stable binary with `go build -o ./bin/logictl ./cmd/logictl`, then run `./bin/logictl daemon install`", installedPath)
 		}
 		return "", err
 	}
 	if info.IsDir() {
-		return "", fmt.Errorf("installed daemon binary path %q is a directory; rebuild `./bin/logi` and rerun `./bin/logi daemon install`", installedPath)
+		return "", fmt.Errorf("installed daemon binary path %q is a directory; rebuild `./bin/logictl` and rerun `./bin/logictl daemon install`", installedPath)
 	}
 	if info.Mode()&0o111 == 0 {
-		return "", fmt.Errorf("installed daemon binary %q is not executable; rebuild `./bin/logi` and rerun `./bin/logi daemon install`", installedPath)
+		return "", fmt.Errorf("installed daemon binary %q is not executable; rebuild `./bin/logictl` and rerun `./bin/logictl daemon install`", installedPath)
 	}
 	return installedPath, nil
 }
 
 func launchAgentBinaryPath(paths appcore.Paths) string {
-	return filepath.Join(paths.StateDir, "logi-launchagent")
+	return filepath.Join(paths.StateDir, "logictl-daemon")
 }
 
 func requiresLaunchAgentStaging(binary string) bool {

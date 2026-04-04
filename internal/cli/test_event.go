@@ -9,9 +9,9 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/realtong/logi-cli/internal/devices/mxmaster4"
-	"github.com/realtong/logi-cli/internal/events"
-	"github.com/realtong/logi-cli/internal/hidapi"
+	"github.com/realtong/logictl-cli/internal/devices/mxmaster4"
+	"github.com/realtong/logictl-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/hidapi"
 	"github.com/spf13/cobra"
 )
 

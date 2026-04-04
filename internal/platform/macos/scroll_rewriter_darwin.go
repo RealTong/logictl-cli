@@ -68,7 +68,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/realtong/logi-cli/internal/config"
+	"github.com/realtong/logictl-cli/internal/config"
 )
 
 type EventTapScrollRewriter struct {

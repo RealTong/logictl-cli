@@ -15,7 +15,7 @@ func TestQueryStatusMissingSocket(t *testing.T) {
 }
 
 func TestListenRejectsActiveSocket(t *testing.T) {
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("logi-ipc-%d.sock", time.Now().UnixNano()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("logictl-ipc-%d.sock", time.Now().UnixNano()))
 	t.Cleanup(func() {
 		_ = os.Remove(socketPath)
 	})

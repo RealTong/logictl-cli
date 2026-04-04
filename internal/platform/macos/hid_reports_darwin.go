@@ -97,7 +97,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/realtong/logi-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/events"
 )
 
 type hidReportSourceFactory struct{}

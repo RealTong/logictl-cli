@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/realtong/logi-cli/internal/app"
+	"github.com/realtong/logictl-cli/internal/app"
 )
 
 func TestStarterConfigContentIsNonEmpty(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/realtong/logi-cli/internal/config"
+	"github.com/realtong/logictl-cli/internal/config"
 )
 
 type Executor struct {

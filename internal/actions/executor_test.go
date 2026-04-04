@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/realtong/logi-cli/internal/config"
+	"github.com/realtong/logictl-cli/internal/config"
 )
 
 type fakeShortcutEmitter struct {

@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/realtong/logi-cli/internal/hidapi"
+	"github.com/realtong/logictl-cli/internal/hidapi"
 	"github.com/spf13/cobra"
 )
 

@@ -32,7 +32,7 @@ system = "mission_control"
 [[actions]]
 id = "run_script"
 type = "script"
-script = "~/.config/logi-cli/scripts/close-tab.sh"
+script = "~/.config/logictl/scripts/close-tab.sh"
 
 [[profiles]]
 id = "chrome"

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/realtong/logi-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/events"
 )
 
 func TestNormalizeHoldMoveDown(t *testing.T) {

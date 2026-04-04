@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/realtong/logi-cli/internal/ipc"
-	platformmacos "github.com/realtong/logi-cli/internal/platform/macos"
+	"github.com/realtong/logictl-cli/internal/ipc"
+	platformmacos "github.com/realtong/logictl-cli/internal/platform/macos"
 )
 
 type fakePlatformDoctor struct {
@@ -80,7 +80,7 @@ func TestDoctorReportsMissingConfig(t *testing.T) {
 			},
 		},
 		fakeStatusReporter{status: ipc.Status{Running: true, Message: "running"}},
-		"/tmp/definitely-missing-logi-cli-config.toml",
+		"/tmp/definitely-missing-logictl-config.toml",
 	)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)

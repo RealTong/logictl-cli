@@ -3,8 +3,8 @@ package cli
 import (
 	"os"
 
-	"github.com/realtong/logi-cli/examples"
-	"github.com/realtong/logi-cli/internal/app"
+	"github.com/realtong/logictl-cli/examples"
+	"github.com/realtong/logictl-cli/internal/app"
 	"github.com/spf13/cobra"
 )
 

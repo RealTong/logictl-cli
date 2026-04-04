@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"github.com/realtong/logi-cli/internal/daemon"
+	"github.com/realtong/logictl-cli/internal/daemon"
 	"github.com/spf13/cobra"
 )
 

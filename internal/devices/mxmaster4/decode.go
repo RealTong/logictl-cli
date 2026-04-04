@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/realtong/logi-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/events"
 )
 
 const (

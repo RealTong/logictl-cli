@@ -1,6 +1,6 @@
-# logi-cli
+# logictl
 
-`logi-cli` is a macOS-first CLI and daemon for Logitech device customization, focused on replacing the input remapping parts of Logi Options+ for `MX Master 4`.
+`logictl` is a macOS-first CLI and daemon for Logitech device customization, focused on replacing the input remapping parts of Logi Options+ for `MX Master 4`.
 
 ## Current Scope
 
@@ -12,7 +12,7 @@
   - thumb wheel
   - wheel mode-shift button
   - haptic panel press
-- TOML config at `~/.config/logi-cli/config.toml`
+- TOML config at `~/.config/logictl/config.toml`
 - Per-app rule matching with precedence
 - Shortcut, system-action, and script execution
 - `doctor`, `devices`, `test event`, `daemon`, and `reload` commands
@@ -20,28 +20,28 @@
 ## First Run
 
 1. `mkdir -p ./bin`
-2. `go build -o ./bin/logi ./cmd/logi`
-3. `./bin/logi init`
-4. `./bin/logi validate`
-5. `./bin/logi doctor`
-6. `./bin/logi devices list`
-7. `./bin/logi test event`
+2. `go build -o ./bin/logictl ./cmd/logictl`
+3. `./bin/logictl init`
+4. `./bin/logictl validate`
+5. `./bin/logictl doctor`
+6. `./bin/logictl devices list`
+7. `./bin/logictl test event`
 
 ## Example Workflow
 
-1. Build the current CLI with `go build -o ./bin/logi ./cmd/logi`
-2. Install the stable background binary with `./bin/logi daemon install`
-3. Start the foreground daemon with `./bin/logi daemon run`, or start the persistent LaunchAgent with `./bin/logi daemon start`
-4. In another terminal, run `./bin/logi daemon status`
-5. Reload config changes with `./bin/logi reload`
+1. Build the current CLI with `go build -o ./bin/logictl ./cmd/logictl`
+2. Install the stable background binary with `./bin/logictl daemon install`
+3. Start the foreground daemon with `./bin/logictl daemon run`, or start the persistent LaunchAgent with `./bin/logictl daemon start`
+4. In another terminal, run `./bin/logictl daemon status`
+5. Reload config changes with `./bin/logictl reload`
 
 ## Background Daemon Permissions
 
-- Use a built binary such as `./bin/logi`; do not use `go run` for daemon lifecycle commands during development.
-- `daemon install` copies the current built binary into the stable LaunchAgent path at `~/.config/logi-cli/state/logi-launchagent`.
+- Use a built binary such as `./bin/logictl`; do not use `go run` for daemon lifecycle commands during development.
+- `daemon install` copies the current built binary into the stable LaunchAgent path at `~/.config/logictl/state/logictl-daemon`.
 - `daemon start` and `daemon restart` only use that installed background binary; they do not overwrite it.
-- On macOS, `~/.config/logi-cli/state/logi-launchagent` needs its own `Input Monitoring` permission. If `daemon start` reports a permission error, add that exact path to `System Settings -> Privacy & Security -> Input Monitoring`, then retry.
-- Rebuilding `./bin/logi` alone does not change the background daemon binary. Permissions usually only need to be revisited after you run `./bin/logi daemon install` again.
+- On macOS, `~/.config/logictl/state/logictl-daemon` needs its own `Input Monitoring` permission. If `daemon start` reports a permission error, add that exact path to `System Settings -> Privacy & Security -> Input Monitoring`, then retry.
+- Rebuilding `./bin/logictl` alone does not change the background daemon binary. Permissions usually only need to be revisited after you run `./bin/logictl daemon install` again.
 - macOS does not provide a normal scriptable way to auto-grant `Input Monitoring` or `Accessibility` to an arbitrary local CLI binary. `tccutil` can reset prompts, but it cannot grant access.
 
 ## MX Master 4 BLE Notes
@@ -80,7 +80,7 @@ See [examples/config.toml](examples/config.toml) for the current example file.
 ## Verification
 
 - `go test ./...`
-- `./bin/logi doctor`
-- `./bin/logi devices list`
+- `./bin/logictl doctor`
+- `./bin/logictl devices list`
 
 The manual validation checklist is in [docs/manual-smoke-test.md](docs/manual-smoke-test.md).

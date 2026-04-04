@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/realtong/logi-cli/internal/app"
-	"github.com/realtong/logi-cli/internal/daemon"
-	"github.com/realtong/logi-cli/internal/hidapi"
-	"github.com/realtong/logi-cli/internal/ipc"
+	"github.com/realtong/logictl-cli/internal/app"
+	"github.com/realtong/logictl-cli/internal/daemon"
+	"github.com/realtong/logictl-cli/internal/hidapi"
+	"github.com/realtong/logictl-cli/internal/ipc"
 )
 
 func TestNewRootCmdHelpHidesCompletion(t *testing.T) {
@@ -31,6 +31,9 @@ func TestNewRootCmdHelpHidesCompletion(t *testing.T) {
 	out := buf.String()
 	if strings.Contains(out, "completion") {
 		t.Fatalf("help output exposes completion command: %s", out)
+	}
+	if got, want := cmd.Use, "logictl"; got != want {
+		t.Fatalf("cmd.Use = %q, want %q", got, want)
 	}
 	if !strings.Contains(out, "version") {
 		t.Fatalf("help output missing version command: %s", out)
@@ -114,7 +117,7 @@ func testPaths(t *testing.T) app.Paths {
 	t.Helper()
 
 	base := t.TempDir()
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("logi-cli-%d.sock", time.Now().UnixNano()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("logictl-%d.sock", time.Now().UnixNano()))
 	t.Cleanup(func() {
 		_ = os.Remove(socketPath)
 	})
@@ -125,7 +128,7 @@ func testPaths(t *testing.T) app.Paths {
 		StateDir:   filepath.Join(base, "state"),
 		LogDir:     filepath.Join(base, "logs"),
 		SocketFile: socketPath,
-		PlistFile:  filepath.Join(base, "LaunchAgents", "io.realtong.logi-cli.plist"),
+		PlistFile:  filepath.Join(base, "LaunchAgents", "io.realtong.logictl.plist"),
 	}
 }
 

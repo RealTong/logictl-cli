@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/realtong/logi-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/events"
 )
 
 func TestDecodeGestureButtonDown(t *testing.T) {

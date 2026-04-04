@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/realtong/logi-cli/internal/app"
-	"github.com/realtong/logi-cli/internal/config"
-	"github.com/realtong/logi-cli/internal/ipc"
-	platformmacos "github.com/realtong/logi-cli/internal/platform/macos"
+	"github.com/realtong/logictl-cli/internal/app"
+	"github.com/realtong/logictl-cli/internal/config"
+	"github.com/realtong/logictl-cli/internal/ipc"
+	platformmacos "github.com/realtong/logictl-cli/internal/platform/macos"
 	"github.com/spf13/cobra"
 )
 

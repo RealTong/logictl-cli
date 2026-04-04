@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/realtong/logi-cli/internal/hidapi"
+	"github.com/realtong/logictl-cli/internal/hidapi"
 )
 
 func TestDevicesListPrintsSummaryLines(t *testing.T) {

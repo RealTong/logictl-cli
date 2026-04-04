@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/realtong/logi-cli/internal/config"
+	"github.com/realtong/logictl-cli/internal/config"
 )
 
 const (
@@ -55,14 +55,21 @@ type scrollRewritePlan struct {
 
 type pendingScrollMatch struct {
 	axis     scrollAxis
+	gesture  string
 	at       time.Time
 	settings config.ScrollConfig
 }
 
+type axisSuppression struct {
+	axis  scrollAxis
+	until time.Time
+}
+
 type scrollMatcher struct {
-	window  time.Duration
-	mu      sync.Mutex
-	pending []pendingScrollMatch
+	window       time.Duration
+	mu           sync.Mutex
+	pending      []pendingScrollMatch
+	suppressions []axisSuppression
 }
 
 func newScrollMatcher(window time.Duration) *scrollMatcher {
@@ -82,6 +89,7 @@ func (m *scrollMatcher) Record(_ string, gesture string, settings config.ScrollC
 	defer m.mu.Unlock()
 	m.pending = append(m.pending, pendingScrollMatch{
 		axis:     axis,
+		gesture:  gesture,
 		at:       at,
 		settings: normalizeScrollConfig(settings),
 	})
@@ -97,17 +105,17 @@ func (m *scrollMatcher) Match(event nativeScrollEvent) (scrollRewritePlan, bool)
 	defer m.mu.Unlock()
 
 	m.purgeExpiredLocked(event.At)
-	for index, candidate := range m.pending {
-		if candidate.axis != axis {
-			continue
-		}
-
-		m.pending = append(m.pending[:index], m.pending[index+1:]...)
-		plan := buildScrollRewritePlan(event, candidate.settings)
-		if len(plan.Emissions) == 0 {
-			return scrollRewritePlan{}, false
-		}
+	if candidate, ok := m.popPendingLocked(axis); ok {
+		m.suppressions = append(m.suppressions, axisSuppression{
+			axis:  axis,
+			until: event.At.Add(m.window),
+		})
+		plan := buildScrollRewritePlan(candidate.gesture, candidate.settings)
 		return plan, true
+	}
+
+	if m.hasSuppressionLocked(axis, event.At) {
+		return scrollRewritePlan{}, true
 	}
 
 	return scrollRewritePlan{}, false
@@ -124,31 +132,63 @@ func (m *scrollMatcher) purgeExpiredLocked(now time.Time) {
 		}
 	}
 	m.pending = keep
+
+	active := m.suppressions[:0]
+	for _, suppression := range m.suppressions {
+		if !now.After(suppression.until) {
+			active = append(active, suppression)
+		}
+	}
+	m.suppressions = active
 }
 
-func buildScrollRewritePlan(event nativeScrollEvent, settings config.ScrollConfig) scrollRewritePlan {
+func (m *scrollMatcher) popPendingLocked(axis scrollAxis) (pendingScrollMatch, bool) {
+	for index, candidate := range m.pending {
+		if candidate.axis != axis {
+			continue
+		}
+		m.pending = append(m.pending[:index], m.pending[index+1:]...)
+		return candidate, true
+	}
+	return pendingScrollMatch{}, false
+}
+
+func (m *scrollMatcher) hasSuppressionLocked(axis scrollAxis, now time.Time) bool {
+	for _, suppression := range m.suppressions {
+		if suppression.axis != axis {
+			continue
+		}
+		if now.After(suppression.until) {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func buildScrollRewritePlan(gesture string, settings config.ScrollConfig) scrollRewritePlan {
 	settings = normalizeScrollConfig(settings)
 	if settings.SmoothScroll {
 		return scrollRewritePlan{
 			Settings:  settings,
-			Emissions: splitPixelScroll(event, settings),
+			Emissions: splitPixelScroll(gesture, settings),
 		}
 	}
+	vertical, horizontal := gestureLineDelta(gesture, settings)
 	return scrollRewritePlan{
 		Settings: settings,
 		Emissions: []scrollEmission{{
 			Unit:       scrollUnitLine,
-			Vertical:   applyScrollDirection(nonZeroOrFallback(event.VerticalLine, event.VerticalPoint), settings),
-			Horizontal: applyScrollDirection(nonZeroOrFallback(event.HorizontalLine, event.HorizontalPoint), settings),
+			Vertical:   vertical,
+			Horizontal: horizontal,
 		}},
 	}
 }
 
-func splitPixelScroll(event nativeScrollEvent, settings config.ScrollConfig) []scrollEmission {
-	totalVertical := nonZeroOrFallback(event.VerticalPoint, event.VerticalLine*defaultPixelStepScale)
-	totalHorizontal := nonZeroOrFallback(event.HorizontalPoint, event.HorizontalLine*defaultPixelStepScale)
-	totalVertical = applyScrollDirection(totalVertical, settings)
-	totalHorizontal = applyScrollDirection(totalHorizontal, settings)
+func splitPixelScroll(gesture string, settings config.ScrollConfig) []scrollEmission {
+	lineVertical, lineHorizontal := gestureLineDelta(gesture, settings)
+	totalVertical := lineVertical * defaultPixelStepScale
+	totalHorizontal := lineHorizontal * defaultPixelStepScale
 
 	if totalVertical == 0 && totalHorizontal == 0 {
 		return nil
@@ -209,6 +249,26 @@ func applyScrollDirection(value int, settings config.ScrollConfig) int {
 	return value
 }
 
+func gestureLineDelta(gesture string, settings config.ScrollConfig) (int, int) {
+	vertical, horizontal := naturalGestureDelta(gesture)
+	return applyScrollDirection(vertical, settings), applyScrollDirection(horizontal, settings)
+}
+
+func naturalGestureDelta(gesture string) (int, int) {
+	switch gesture {
+	case "wheel_up":
+		return 1, 0
+	case "wheel_down":
+		return -1, 0
+	case "thumb_wheel_left":
+		return 0, 1
+	case "thumb_wheel_right":
+		return 0, -1
+	default:
+		return 0, 0
+	}
+}
+
 func splitSteps(total, steps int) []int {
 	if total == 0 || steps <= 0 {
 		return nil
@@ -239,13 +299,6 @@ func splitSteps(total, steps int) []int {
 		remainingSteps--
 	}
 	return out
-}
-
-func nonZeroOrFallback(primary, fallback int) int {
-	if primary != 0 {
-		return primary
-	}
-	return fallback
 }
 
 func valueAt(values []int, index int) int {

@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/realtong/logi-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/events"
 )
 
 func TestTriggerForEventPrefersGesture(t *testing.T) {

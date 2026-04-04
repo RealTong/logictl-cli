@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/realtong/logi-cli/internal/cli"
+	"github.com/realtong/logictl-cli/internal/cli"
 )
 
 func main() {

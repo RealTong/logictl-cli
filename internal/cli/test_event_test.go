@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/realtong/logi-cli/internal/hidapi"
+	"github.com/realtong/logictl-cli/internal/hidapi"
 )
 
 type fakeSource struct {

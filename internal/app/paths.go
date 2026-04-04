@@ -17,7 +17,7 @@ type Paths struct {
 
 func DefaultPaths() Paths {
 	home := homeDir()
-	base := filepath.Join(home, ".config", "logi-cli")
+	base := filepath.Join(home, ".config", "logictl")
 
 	return Paths{
 		ConfigDir:  base,
@@ -25,7 +25,7 @@ func DefaultPaths() Paths {
 		StateDir:   filepath.Join(base, "state"),
 		LogDir:     filepath.Join(base, "logs"),
 		SocketFile: filepath.Join(base, "state", "daemon.sock"),
-		PlistFile:  filepath.Join(home, "Library", "LaunchAgents", "io.realtong.logi-cli.plist"),
+		PlistFile:  filepath.Join(home, "Library", "LaunchAgents", "io.realtong.logictl.plist"),
 	}
 }
 

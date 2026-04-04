@@ -3,17 +3,17 @@
 ## First Run
 
 1. `mkdir -p ./bin`
-2. `go build -o ./bin/logi ./cmd/logi`
-3. `./bin/logi init`
-4. `./bin/logi validate`
-5. Grant `Accessibility` and `Input Monitoring` if `./bin/logi doctor` reports them missing.
-6. `./bin/logi doctor`
-7. `./bin/logi devices list`
-8. `./bin/logi test event --path '<mx-master-4-path>'`
+2. `go build -o ./bin/logictl ./cmd/logictl`
+3. `./bin/logictl init`
+4. `./bin/logictl validate`
+5. Grant `Accessibility` and `Input Monitoring` if `./bin/logictl doctor` reports them missing.
+6. `./bin/logictl doctor`
+7. `./bin/logictl devices list`
+8. `./bin/logictl test event --path '<mx-master-4-path>'`
 
 ## MX Master 4 Semantic Capture
 
-1. Run `./bin/logi test event --path '<mx-master-4-path>'`
+1. Run `./bin/logictl test event --path '<mx-master-4-path>'`
 2. Press the gesture button once. Confirm `gesture_button_down` and `gesture_button_up` appear.
 3. Hold the gesture button, move the mouse down, then release. Confirm `gesture_button_hold` and `hold(gesture_button)+move(down)` appear.
 4. Press the back and forward buttons. Confirm `back_button_down/up` and `forward_button_down/up` appear.
@@ -23,21 +23,21 @@
 
 ## Daemon Control Plane
 
-1. Run `./bin/logi daemon run`
-2. In another terminal, run `./bin/logi daemon status`
+1. Run `./bin/logictl daemon run`
+2. In another terminal, run `./bin/logictl daemon status`
 3. Confirm the output is `running`
-4. In the second terminal, run `./bin/logi reload`
+4. In the second terminal, run `./bin/logictl reload`
 5. Confirm the output is `reload requested`
 6. With `devices.scroll.direction = "standard"`, confirm the main wheel and thumb wheel now move in the Windows-style direction while the daemon is running.
-7. Flip `devices.scroll.direction` back to `"natural"`, run `./bin/logi reload`, and confirm the native macOS direction returns.
+7. Flip `devices.scroll.direction` back to `"natural"`, run `./bin/logictl reload`, and confirm the native macOS direction returns.
 8. Toggle `devices.scroll.smooth_scroll` between `true` and `false`, reload, and confirm scrolling switches between short smooth bursts and line-like ticks.
 
 ## LaunchAgent
 
-1. Run `./bin/logi daemon install`
-2. Grant `Input Monitoring` to `~/.config/logi-cli/state/logi-launchagent` if macOS prompts for it or if `start` later reports a permission error.
-3. Run `./bin/logi daemon start`
-4. Run `./bin/logi daemon status`
+1. Run `./bin/logictl daemon install`
+2. Grant `Input Monitoring` to `~/.config/logictl/state/logictl-daemon` if macOS prompts for it or if `start` later reports a permission error.
+3. Run `./bin/logictl daemon start`
+4. Run `./bin/logictl daemon status`
 5. Confirm the daemon reports `running`
-6. Run `./bin/logi daemon restart`
-7. Run `./bin/logi daemon stop`
+6. Run `./bin/logictl daemon restart`
+7. Run `./bin/logictl daemon stop`

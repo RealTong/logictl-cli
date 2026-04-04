@@ -1,8 +1,8 @@
 MX Master 4 raw HID report fixtures captured from a real Bluetooth device.
 
 Capture source files:
-- `/tmp/logi-gesture-button-down.txt`
-- `/tmp/logi-gesture-button-hold-move-down.txt`
+- `/tmp/logictl-gesture-button-down.txt`
+- `/tmp/logictl-gesture-button-hold-move-down.txt`
 
 Hardware context:
 - Path: `DevSrvsID:4295271338`

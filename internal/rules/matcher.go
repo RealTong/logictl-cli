@@ -3,8 +3,8 @@ package rules
 import (
 	"fmt"
 
-	"github.com/realtong/logi-cli/internal/config"
-	"github.com/realtong/logi-cli/internal/events"
+	"github.com/realtong/logictl-cli/internal/config"
+	"github.com/realtong/logictl-cli/internal/events"
 )
 
 func triggerForEvent(event events.DeviceEvent) (string, bool) {
