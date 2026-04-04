@@ -18,6 +18,7 @@ import (
 )
 
 type daemonServiceManager interface {
+	Install(context.Context) (string, error)
 	Start(context.Context) error
 	Stop(context.Context) error
 	Restart(context.Context) error
@@ -45,12 +46,29 @@ func newDaemonCmdWithServiceManager(app *daemon.App, manager daemonServiceManage
 		Short: "Control the logi-cli daemon",
 	}
 
+	cmd.AddCommand(newDaemonInstallCmd(manager))
 	cmd.AddCommand(newDaemonRunCmd(app))
 	cmd.AddCommand(newDaemonStartCmd(app, manager))
 	cmd.AddCommand(newDaemonStatusCmd(app))
 	cmd.AddCommand(newDaemonStopCmd(manager))
 	cmd.AddCommand(newDaemonRestartCmd(app, manager))
 	return cmd
+}
+
+func newDaemonInstallCmd(manager daemonServiceManager) *cobra.Command {
+	return &cobra.Command{
+		Use:   "install",
+		Short: "Install the stable LaunchAgent daemon binary",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			installed, err := manager.Install(cmd.Context())
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "installed %s\n", installed)
+			return nil
+		},
+	}
 }
 
 func newDaemonRunCmd(app *daemon.App) *cobra.Command {
@@ -141,20 +159,25 @@ func newDaemonRestartCmd(app daemonPreflighter, manager daemonServiceManager) *c
 	}
 }
 
-func (m launchAgentServiceManager) Start(ctx context.Context) error {
+func (m launchAgentServiceManager) Install(ctx context.Context) (string, error) {
+	_ = ctx
 	binary, err := m.executable()
 	if err != nil {
-		return err
+		return "", err
 	}
-	stagedBinary, err := stageLaunchAgentBinary(m.paths, binary)
+	return installLaunchAgentBinary(m.paths, binary)
+}
+
+func (m launchAgentServiceManager) Start(ctx context.Context) error {
+	installedBinary, err := resolveInstalledLaunchAgentBinary(m.paths)
 	if err != nil {
 		return err
 	}
-	if err := platformmacos.StartLaunchAgent(ctx, m.paths, stagedBinary); err != nil {
+	if err := platformmacos.StartLaunchAgent(ctx, m.paths, installedBinary); err != nil {
 		return err
 	}
 	if err := waitForDaemonReady(m.paths.SocketFile, 2*time.Second); err != nil {
-		return launchAgentStartFailure(m.paths, stagedBinary, err)
+		return launchAgentStartFailure(m.paths, installedBinary, err)
 	}
 	return nil
 }
@@ -164,34 +187,55 @@ func (m launchAgentServiceManager) Stop(ctx context.Context) error {
 }
 
 func (m launchAgentServiceManager) Restart(ctx context.Context) error {
-	binary, err := m.executable()
+	installedBinary, err := resolveInstalledLaunchAgentBinary(m.paths)
 	if err != nil {
 		return err
 	}
-	stagedBinary, err := stageLaunchAgentBinary(m.paths, binary)
-	if err != nil {
-		return err
-	}
-	if err := platformmacos.RestartLaunchAgent(ctx, m.paths, stagedBinary); err != nil {
+	if err := platformmacos.RestartLaunchAgent(ctx, m.paths, installedBinary); err != nil {
 		return err
 	}
 	if err := waitForDaemonReady(m.paths.SocketFile, 2*time.Second); err != nil {
-		return launchAgentStartFailure(m.paths, stagedBinary, err)
+		return launchAgentStartFailure(m.paths, installedBinary, err)
 	}
 	return nil
 }
 
-func stageLaunchAgentBinary(paths appcore.Paths, binary string) (string, error) {
-	if !requiresLaunchAgentStaging(binary) {
-		return binary, nil
+func installLaunchAgentBinary(paths appcore.Paths, binary string) (string, error) {
+	if requiresLaunchAgentStaging(binary) {
+		return "", fmt.Errorf("current executable %q looks like a go run build cache binary; build a stable binary such as ./bin/logi with `go build -o ./bin/logi ./cmd/logi` and run `./bin/logi daemon install`", binary)
 	}
 
 	if err := os.MkdirAll(paths.StateDir, 0o755); err != nil {
 		return "", err
 	}
 
-	stagedPath := filepath.Join(paths.StateDir, "logi-launchagent")
-	return stagedPath, copyExecutable(binary, stagedPath)
+	installedPath := launchAgentBinaryPath(paths)
+	if filepath.Clean(binary) == filepath.Clean(installedPath) {
+		return installedPath, nil
+	}
+	return installedPath, copyExecutable(binary, installedPath)
+}
+
+func resolveInstalledLaunchAgentBinary(paths appcore.Paths) (string, error) {
+	installedPath := launchAgentBinaryPath(paths)
+	info, err := os.Stat(installedPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("no installed daemon binary at %s; build a stable binary with `go build -o ./bin/logi ./cmd/logi`, then run `./bin/logi daemon install`", installedPath)
+		}
+		return "", err
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("installed daemon binary path %q is a directory; rebuild `./bin/logi` and rerun `./bin/logi daemon install`", installedPath)
+	}
+	if info.Mode()&0o111 == 0 {
+		return "", fmt.Errorf("installed daemon binary %q is not executable; rebuild `./bin/logi` and rerun `./bin/logi daemon install`", installedPath)
+	}
+	return installedPath, nil
+}
+
+func launchAgentBinaryPath(paths appcore.Paths) string {
+	return filepath.Join(paths.StateDir, "logi-launchagent")
 }
 
 func requiresLaunchAgentStaging(binary string) bool {

@@ -19,25 +19,30 @@
 
 ## First Run
 
-1. `go run ./cmd/logi init`
-2. `go run ./cmd/logi validate`
-3. `go run ./cmd/logi doctor`
-4. `go run ./cmd/logi devices list`
-5. `go run ./cmd/logi test event`
+1. `mkdir -p ./bin`
+2. `go build -o ./bin/logi ./cmd/logi`
+3. `./bin/logi init`
+4. `./bin/logi validate`
+5. `./bin/logi doctor`
+6. `./bin/logi devices list`
+7. `./bin/logi test event`
 
 ## Example Workflow
 
-1. Start the foreground daemon with `go run ./cmd/logi daemon run`
-2. In another terminal, run `go run ./cmd/logi daemon status`
-3. Reload config changes with `go run ./cmd/logi reload`
-4. Install the persistent LaunchAgent with `go run ./cmd/logi daemon start`
+1. Build the current CLI with `go build -o ./bin/logi ./cmd/logi`
+2. Install the stable background binary with `./bin/logi daemon install`
+3. Start the foreground daemon with `./bin/logi daemon run`, or start the persistent LaunchAgent with `./bin/logi daemon start`
+4. In another terminal, run `./bin/logi daemon status`
+5. Reload config changes with `./bin/logi reload`
 
 ## Background Daemon Permissions
 
-- `daemon run` runs in the current foreground process, so it uses the permissions already granted to your terminal or host app.
-- `daemon start` installs a LaunchAgent and stages a stable background binary at `~/.config/logi-cli/state/logi-launchagent`.
-- On macOS, that staged binary needs its own `Input Monitoring` permission. If `daemon start` reports a permission error, add `~/.config/logi-cli/state/logi-launchagent` to `System Settings -> Privacy & Security -> Input Monitoring`, then retry.
-- During development, repeated `go run` rebuilds can cause macOS to treat the staged daemon binary as a new untrusted executable. If permissions appear to "disappear" after a rebuild, re-enable `Input Monitoring` for `~/.config/logi-cli/state/logi-launchagent`, or prefer a stable `go build -o ./bin/logi ./cmd/logi` workflow.
+- Use a built binary such as `./bin/logi`; do not use `go run` for daemon lifecycle commands during development.
+- `daemon install` copies the current built binary into the stable LaunchAgent path at `~/.config/logi-cli/state/logi-launchagent`.
+- `daemon start` and `daemon restart` only use that installed background binary; they do not overwrite it.
+- On macOS, `~/.config/logi-cli/state/logi-launchagent` needs its own `Input Monitoring` permission. If `daemon start` reports a permission error, add that exact path to `System Settings -> Privacy & Security -> Input Monitoring`, then retry.
+- Rebuilding `./bin/logi` alone does not change the background daemon binary. Permissions usually only need to be revisited after you run `./bin/logi daemon install` again.
+- macOS does not provide a normal scriptable way to auto-grant `Input Monitoring` or `Accessibility` to an arbitrary local CLI binary. `tccutil` can reset prompts, but it cannot grant access.
 
 ## MX Master 4 BLE Notes
 
@@ -75,7 +80,7 @@ See [examples/config.toml](examples/config.toml) for the current example file.
 ## Verification
 
 - `go test ./...`
-- `go run ./cmd/logi doctor`
-- `go run ./cmd/logi devices list`
+- `./bin/logi doctor`
+- `./bin/logi devices list`
 
 The manual validation checklist is in [docs/manual-smoke-test.md](docs/manual-smoke-test.md).

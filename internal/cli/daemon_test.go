@@ -28,6 +28,11 @@ type fakeDaemonServiceManager struct {
 	calls []string
 }
 
+func (m *fakeDaemonServiceManager) Install(context.Context) (string, error) {
+	m.calls = append(m.calls, "install")
+	return "/tmp/logi-launchagent", nil
+}
+
 func (m *fakeDaemonServiceManager) Start(context.Context) error {
 	m.calls = append(m.calls, "start")
 	return nil
@@ -55,6 +60,24 @@ func TestDaemonStartCmdInvokesServiceManager(t *testing.T) {
 	}
 	if len(manager.calls) != 1 || manager.calls[0] != "start" {
 		t.Fatalf("manager.calls = %#v, want [start]", manager.calls)
+	}
+}
+
+func TestDaemonInstallCmdInvokesServiceManager(t *testing.T) {
+	manager := &fakeDaemonServiceManager{}
+	cmd := newDaemonInstallCmd(manager)
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+	if len(manager.calls) != 1 || manager.calls[0] != "install" {
+		t.Fatalf("manager.calls = %#v, want [install]", manager.calls)
+	}
+	if got := buf.String(); !strings.Contains(got, "/tmp/logi-launchagent") {
+		t.Fatalf("output = %q, want installed path", got)
 	}
 }
 
@@ -105,24 +128,19 @@ func TestStageLaunchAgentBinaryCopiesExecutableIntoStableStatePath(t *testing.T)
 		StateDir: filepath.Join(root, "state"),
 	}
 
-	staged, err := stageLaunchAgentBinary(paths, source)
-	if err != nil {
-		t.Fatalf("stageLaunchAgentBinary() returned error: %v", err)
+	installed, err := installLaunchAgentBinary(paths, source)
+	if err == nil {
+		t.Fatalf("installLaunchAgentBinary() error = nil, want go run rejection for %q", source)
 	}
-	if staged == source {
-		t.Fatalf("stageLaunchAgentBinary() = %q, want stable copied path", staged)
+	if !strings.Contains(err.Error(), "build a stable binary") {
+		t.Fatalf("installLaunchAgentBinary() error = %q, want stable-binary guidance", err)
 	}
-
-	got, err := os.ReadFile(staged)
-	if err != nil {
-		t.Fatalf("ReadFile(%q) returned error: %v", staged, err)
-	}
-	if string(got) != "binary" {
-		t.Fatalf("staged file contents = %q, want %q", string(got), "binary")
+	if installed != "" {
+		t.Fatalf("installLaunchAgentBinary() = %q, want empty installed path on rejection", installed)
 	}
 }
 
-func TestStageLaunchAgentBinaryLeavesStableExecutableInPlace(t *testing.T) {
+func TestInstallLaunchAgentBinaryCopiesStableExecutableIntoInstalledPath(t *testing.T) {
 	root := t.TempDir()
 	source := filepath.Join(root, "bin", "logi")
 	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
@@ -136,37 +154,60 @@ func TestStageLaunchAgentBinaryLeavesStableExecutableInPlace(t *testing.T) {
 		StateDir: filepath.Join(root, "state"),
 	}
 
-	staged, err := stageLaunchAgentBinary(paths, source)
+	installed, err := installLaunchAgentBinary(paths, source)
 	if err != nil {
-		t.Fatalf("stageLaunchAgentBinary() returned error: %v", err)
+		t.Fatalf("installLaunchAgentBinary() returned error: %v", err)
 	}
-	if staged != source {
-		t.Fatalf("stageLaunchAgentBinary() = %q, want original stable path %q", staged, source)
+	if installed == source {
+		t.Fatalf("installLaunchAgentBinary() = %q, want copied installed path distinct from source", installed)
+	}
+
+	got, err := os.ReadFile(installed)
+	if err != nil {
+		t.Fatalf("ReadFile(%q) returned error: %v", installed, err)
+	}
+	if string(got) != "binary" {
+		t.Fatalf("installed file contents = %q, want %q", string(got), "binary")
 	}
 }
 
-func TestStageLaunchAgentBinaryCopiesGoBuildCacheExecutableIntoStableStatePath(t *testing.T) {
+func TestResolveInstalledLaunchAgentBinaryReturnsInstalledBinaryPath(t *testing.T) {
 	root := t.TempDir()
-	sourceDir := filepath.Join(root, "Library", "Caches", "go-build", "e6")
-	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(%q) returned error: %v", sourceDir, err)
+	paths := appcore.Paths{
+		StateDir: filepath.Join(root, "state"),
+	}
+	installed := filepath.Join(paths.StateDir, "logi-launchagent")
+	if err := os.MkdirAll(paths.StateDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(%q) returned error: %v", paths.StateDir, err)
+	}
+	if err := os.WriteFile(installed, []byte("binary"), 0o755); err != nil {
+		t.Fatalf("WriteFile(%q) returned error: %v", installed, err)
 	}
 
-	source := filepath.Join(sourceDir, "logi")
-	if err := os.WriteFile(source, []byte("binary"), 0o755); err != nil {
-		t.Fatalf("WriteFile(%q) returned error: %v", source, err)
+	got, err := resolveInstalledLaunchAgentBinary(paths)
+	if err != nil {
+		t.Fatalf("resolveInstalledLaunchAgentBinary() returned error: %v", err)
 	}
+	if got != installed {
+		t.Fatalf("resolveInstalledLaunchAgentBinary() = %q, want %q", got, installed)
+	}
+}
 
+func TestResolveInstalledLaunchAgentBinaryRequiresInstallStep(t *testing.T) {
+	root := t.TempDir()
 	paths := appcore.Paths{
 		StateDir: filepath.Join(root, "state"),
 	}
 
-	staged, err := stageLaunchAgentBinary(paths, source)
-	if err != nil {
-		t.Fatalf("stageLaunchAgentBinary() returned error: %v", err)
+	got, err := resolveInstalledLaunchAgentBinary(paths)
+	if err == nil {
+		t.Fatal("resolveInstalledLaunchAgentBinary() error = nil, want install guidance")
 	}
-	if staged == source {
-		t.Fatalf("stageLaunchAgentBinary() = %q, want stable copied path", staged)
+	if !strings.Contains(err.Error(), "daemon install") {
+		t.Fatalf("resolveInstalledLaunchAgentBinary() error = %q, want install guidance", err)
+	}
+	if got != "" {
+		t.Fatalf("resolveInstalledLaunchAgentBinary() = %q, want empty path on missing install", got)
 	}
 }
 
