@@ -1,0 +1,61 @@
+---
+title: Gestures
+description: 手势按钮的语义、释放判定和四方向动作。
+icon: MousePointer2
+---
+
+<DocsPageHeader
+  eyebrow="Gestures"
+  title="手势在释放时结算方向，而不是按下瞬间立刻执行"
+  description="当前行为更接近 Logi Options+：按住手势按钮时先累计移动，等方向结束并释放按钮后，再决定最终动作。"
+/>
+
+## 基础事件
+
+你会在 `test event` 或规则里遇到几类常见语义：
+
+- `gesture_button_down`
+- `gesture_button_hold`
+- `gesture_button_up`
+- `hold(gesture_button)+move(up|down|left|right)`
+
+## `gesture_button_down` 的当前含义
+
+`gesture_button_down` 现在更适合作为“默认 tap 动作”来理解：
+
+- 按下时不会立刻触发
+- 如果没有方向手势命中，它会在释放时作为默认动作落地
+- 如果识别到了方向手势，方向动作会覆盖掉这个默认动作
+
+## 方向手势什么时候判定
+
+方向不会在第一下抖动时就定死。现在的行为是：
+
+1. 按住 `gesture_button`
+2. 累计移动位移
+3. 在释放时按最终位移主轴结算方向
+
+这会降低早期抖动把 `left` 误判成 `up/down` 的概率。
+
+## 支持方向
+
+- `hold(gesture_button)+move(up)`
+- `hold(gesture_button)+move(down)`
+- `hold(gesture_button)+move(left)`
+- `hold(gesture_button)+move(right)`
+
+## 用 `test event` 看手势
+
+<CommandBlock title="Inspect normalized events">
+./bin/logictl test event
+</CommandBlock>
+
+观察重点：
+
+- 按下和释放是否都出现
+- 方向事件是否在释放后出现
+- 某个方向是否总被误判成其他方向
+
+<AgentCallout title="左移不稳时先看样本，不要盲调" eyebrow="Agent-first">
+  如果某个方向仍然难以稳定识别，先抓真实 `test event` 输出，再看是不是人体工学偏移，还是原始 HID 样本里还存在另一种 report 形态。
+</AgentCallout>

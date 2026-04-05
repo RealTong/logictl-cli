@@ -1,17 +1,17 @@
 import { createFileRoute, notFound } from '@tanstack/react-router';
-import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import { createServerFn } from '@tanstack/react-start';
-import { getPageMarkdownUrl, source } from '@/lib/source-zh';
-import browserCollections from 'collections/browser';
+import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import { DocsBody, DocsPage } from 'fumadocs-ui/layouts/docs/page';
+import { useFumadocsLoader } from 'fumadocs-core/source/client';
+import browserCollections from 'collections/browser';
+import { Suspense } from 'react';
+import { DocsLayoutHeader } from '@/components/docs/docs-layout-header';
+import { useMDXComponents } from '@/components/mdx';
 import { baseOptions } from '@/lib/layout.shared';
 import { gitConfig } from '@/lib/shared';
-import { useFumadocsLoader } from 'fumadocs-core/source/client';
-import { Suspense } from 'react';
-import { useMDXComponents } from '@/components/mdx';
-import { DocsLayoutHeader } from '@/components/docs/docs-layout-header';
+import { getPageMarkdownUrl, source } from '@/lib/source-en';
 
-export const Route = createFileRoute('/docs/$')({
+export const Route = createFileRoute('/en/docs/$')({
   component: Page,
   loader: async ({ params }) => {
     const slugs = params._splat?.split('/') ?? [];
@@ -37,10 +37,9 @@ const serverLoader = createServerFn({
     };
   });
 
-const clientLoader = browserCollections.docs.createClientLoader({
+const clientLoader = browserCollections.enDocs.createClientLoader({
   component(
     { toc, frontmatter, default: MDX },
-    // you can define props for the component
     {
       markdownUrl,
       path,
@@ -58,8 +57,8 @@ const clientLoader = browserCollections.docs.createClientLoader({
           description={frontmatter.description}
           pathname={url}
           markdownUrl={markdownUrl}
-          githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/docs/content/docs/${path}`}
-          eyebrow="参考"
+          githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/docs/content/en/docs/${path}`}
+          eyebrow="Reference"
         />
         <DocsBody className="mt-8">
           <MDX components={useMDXComponents()} />

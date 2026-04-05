@@ -1,0 +1,63 @@
+---
+title: Quick Start
+description: Build the binary, verify permissions, inspect events, and start the daemon.
+icon: Rocket
+---
+
+<DocsPageHeader
+  eyebrow="Quick Start"
+  title="Make one binding work reliably before expanding the system"
+  description="The first goal is not a perfect configuration. The goal is verifying build, permissions, device visibility, and event output."
+/>
+
+## 1. Build and initialize
+
+<CommandBlock title="Build and initialize">
+mkdir -p ./bin
+go build -o ./bin/logictl ./cmd/logictl
+./bin/logictl init
+./bin/logictl validate
+</CommandBlock>
+
+## 2. Check permissions and device visibility
+
+<CommandBlock title="Doctor and devices">
+./bin/logictl doctor
+./bin/logictl devices list
+./bin/logictl test event
+</CommandBlock>
+
+`doctor` tells you:
+
+- which config file is currently being read
+- whether `Accessibility` is granted
+- whether `Input Monitoring` is granted
+- whether the daemon is reachable
+
+## 3. Start the stable background binary
+
+Do not use `go run` to manage daemon lifecycle during development. Use the installed binary path:
+
+<CommandBlock title="Install and start daemon">
+./bin/logictl daemon install
+./bin/logictl daemon start
+./bin/logictl daemon status
+</CommandBlock>
+
+## 4. macOS permissions
+
+If `daemon start` reports a permission problem, check:
+
+- whether `~/.config/logictl/state/logictl-daemon` has `Input Monitoring`
+- whether the binary you are running has `Accessibility`
+
+<AgentCallout title="Why the installed daemon path matters" eyebrow="Human Tip">
+  `daemon install` copies the current built binary into a stable LaunchAgent path. After that, `daemon start` and `daemon restart` always use that installed binary, not whatever happens to be in your current working directory.
+</AgentCallout>
+
+## 5. What a successful first run looks like
+
+- `./bin/logictl doctor` reports no blocking permission issue
+- `./bin/logictl devices list` can see the target device
+- `./bin/logictl test event` prints button or gesture events
+- `./bin/logictl daemon status` returns `running`

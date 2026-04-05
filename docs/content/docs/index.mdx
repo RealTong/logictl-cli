@@ -1,31 +1,45 @@
 ---
-title: Hello World
-description: Your favourite docs framework.
-icon: Rocket
+title: 概览
+description: 从首次运行到日常绑定维护，快速理解 logictl 的文档入口。
+icon: PanelsTopLeft
 ---
 
-Hey there! Fumadocs is the docs framework that also works on Tanstack Start!
+<DocsPageHeader
+  eyebrow="Overview"
+  title="先把输入链路跑通，再把高频动作交给鼠标"
+  description="logictl 的核心不是更花哨的控制面板，而是一条足够短、足够本地、足够可读的输入到动作链路。"
+  labels={["macOS", "CLI + daemon", "MX Master 4"]}
+>
+  文档首页负责告诉你先看哪里。真正细节会分散到配置、手势、排错和示例页里。
+</DocsPageHeader>
 
-## Heading
-
-Hello World!
+## 先看哪一页
 
 <Cards>
-  <Card title="Learn more about Tanstack Start" href="https://tanstack.com/start" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
+  <Card title="Quick Start" href="/docs/quick-start">
+    先完成构建、权限、首次事件验证和 daemon 启动。
+  </Card>
+  <Card title="Configuration" href="/docs/configuration">
+    看清 `devices`、`actions`、`profiles.bindings` 这些核心块怎么拼起来。
+  </Card>
+  <Card title="Gestures" href="/docs/gestures">
+    了解 `gesture_button_down`、释放判定和四方向手势的语义。
+  </Card>
+  <Card title="Troubleshooting" href="/docs/troubleshooting">
+    权限、BLE、后台二进制路径和 `test event` 输出都在这里。
+  </Card>
+  <Card title="Examples" href="/docs/examples">
+    直接抄一份能工作的 Mission Control、桌面切换和 Agent 绑定。
+  </Card>
 </Cards>
 
-### CodeBlock
+## 文档的阅读顺序
 
-```ts
-console.log('Hello World');
-```
+1. 先跑一遍 [Quick Start](/docs/quick-start)，确认 `doctor`、`devices list` 和 `test event` 都有输出。
+2. 再看 [Configuration](/docs/configuration)，把 `devices`、`actions` 和 `profiles` 的关系理顺。
+3. 如果你主要依赖手势按钮，接着看 [Gestures](/docs/gestures)。
+4. 真机行为不稳定时，直接跳到 [Troubleshooting](/docs/troubleshooting)。
 
-#### Table
-
-| Head                            | Description                         |
-| ------------------------------- | ----------------------------------- |
-| `hello`                         | Hello World                         |
-| very **important**              | Hey                                 |
-| _Surprisingly_                  | Fumadocs                            |
-| very long text that looks weird | hello world hello world hello world |
+<AgentCallout title="把 Agent 工作流放在后面一点接入" eyebrow="Agent-first">
+  建议先确认系统动作和快捷键路径稳定，再把手势接到 AI 或 Agent 命令。这样排错会简单很多。
+</AgentCallout>

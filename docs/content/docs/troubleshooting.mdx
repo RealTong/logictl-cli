@@ -1,0 +1,69 @@
+---
+title: Troubleshooting
+description: 权限、BLE、后台二进制路径和事件调试方式。
+icon: ShieldAlert
+---
+
+<DocsPageHeader
+  eyebrow="Troubleshooting"
+  title="先定位是哪一层出问题：权限、设备、daemon，还是规则"
+  description="大多数“不触发”问题都不是同一个原因。先分层，再逐步缩小范围。"
+/>
+
+## 权限层
+
+先检查：
+
+- `Accessibility`
+- `Input Monitoring`
+
+如果你安装了后台 daemon，需要确认被授予权限的是这条稳定路径：
+
+`~/.config/logictl/state/logictl-daemon`
+
+## daemon 层
+
+这些命令能帮助你确认后台状态：
+
+<CommandBlock title="Daemon status">
+./bin/logictl daemon status
+./bin/logictl reload
+</CommandBlock>
+
+常见误区：
+
+- 只重新构建 `./bin/logictl`，但没有重新执行 `daemon install`
+- 误以为 `reload` 会让后台吃到新的二进制
+- 用 `go run` 管理 daemon 生命周期
+
+## 设备层
+
+`MX Master 4` 在 BLE 模式下会暴露共享 HID path。当前 daemon 已切到 macOS 原生 `IOHIDManager` 采集，以避免直接打开共享 path 后抢占主鼠标接口。
+
+如果你遇到鼠标失控或设备读不到：
+
+- 先确认连接方式和当前系统设备状态
+- 再看 `devices list` 和 `doctor`
+
+## 规则层
+
+<CommandBlock title="Inspect events before changing config">
+./bin/logictl test event
+</CommandBlock>
+
+如果 `test event` 都看不到正确语义，先不要急着改配置。先确认：
+
+- 设备是否被识别
+- 权限是否正常
+- 手势事件是否已经在归一化层出现
+
+## 快速排查顺序
+
+1. `./bin/logictl doctor`
+2. `./bin/logictl devices list`
+3. `./bin/logictl test event`
+4. `./bin/logictl daemon status`
+
+<AgentCallout title="当 build 和 runtime 看起来都没问题时" eyebrow="Human Tip">
+  如果某条绑定只在某个应用里失效，优先检查 `app_bundle_id`、profile 作用域，以及是否有更高优先级的规则抢先命中。
+</AgentCallout>

@@ -1,0 +1,61 @@
+---
+title: Gestures
+description: Gesture button semantics, release-time direction resolution, and the four directions.
+icon: MousePointer2
+---
+
+<DocsPageHeader
+  eyebrow="Gestures"
+  title="Directions are resolved on release, not at button press"
+  description="The current behavior is closer to Logi Options+: hold the gesture button, accumulate movement, then decide the final action when the gesture ends and the button is released."
+/>
+
+## Core events
+
+You will see a few common semantic events in `test event` output and config rules:
+
+- `gesture_button_down`
+- `gesture_button_hold`
+- `gesture_button_up`
+- `hold(gesture_button)+move(up|down|left|right)`
+
+## What `gesture_button_down` means now
+
+Treat `gesture_button_down` as a default tap-style action:
+
+- it does not fire immediately on press
+- if no directional gesture wins, it lands on release
+- if a directional gesture is recognized, that direction overrides the default action
+
+## When the direction is decided
+
+The direction is no longer locked in by the first noisy movement sample:
+
+1. hold `gesture_button`
+2. accumulate movement
+3. resolve the dominant direction on release
+
+This reduces cases where an intended left gesture gets stolen by early vertical drift.
+
+## Supported directions
+
+- `hold(gesture_button)+move(up)`
+- `hold(gesture_button)+move(down)`
+- `hold(gesture_button)+move(left)`
+- `hold(gesture_button)+move(right)`
+
+## Inspect gestures with `test event`
+
+<CommandBlock title="Inspect normalized events">
+./bin/logictl test event
+</CommandBlock>
+
+Look for:
+
+- whether both press and release appear
+- whether the direction appears after release
+- whether one direction is consistently misclassified
+
+<AgentCallout title="Capture samples before you keep tuning thresholds" eyebrow="Agent-first">
+  If one direction still feels unreliable, collect real `test event` output first. Then decide whether you are dealing with ergonomics, raw HID variance, or a remaining normalization edge case.
+</AgentCallout>

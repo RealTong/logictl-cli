@@ -1,0 +1,83 @@
+---
+title: Configuration
+description: 理解 devices、actions、profiles 和 bindings 的组合方式。
+icon: FileCode
+---
+
+<DocsPageHeader
+  eyebrow="Configuration"
+  title="用三层结构描述设备、动作和命中规则"
+  description="logictl 的配置重点不在语法本身，而在你能否清楚区分设备能力、可执行动作，以及在哪些上下文里命中哪些绑定。"
+/>
+
+## 配置块概览
+
+- `[[devices]]`：描述设备匹配、能力别名和滚轮行为
+- `[[actions]]`：定义系统动作、快捷键或脚本动作
+- `[[profiles]]`：定义规则作用域，例如全局或按应用匹配
+- `[[profiles.bindings]]`：把某个设备触发器绑定到某个动作
+
+<ConfigBlock title="Sample structure" path="~/.config/logictl/config.toml">
+[[devices]]
+id = "mx-master-4"
+match_vendor_id = 1133
+match_product_id = 45122
+
+  [devices.scroll]
+  direction = "standard"
+  smooth_scroll = false
+
+[[actions]]
+id = "mission_control"
+type = "system"
+system = "mission_control"
+
+[[profiles]]
+id = "global"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "gesture_button_down"
+  action = "mission_control"
+</ConfigBlock>
+
+## `devices`
+
+设备块负责两类事情：
+
+- 识别哪一个 Logitech 设备应该吃到这段配置
+- 把设备能力暴露为统一的语义触发器
+
+例如 `gesture_button`、`back_button`、`wheel_up`、`thumb_wheel_left` 都可以在这里被映射出来。
+
+## `actions`
+
+动作是可复用目标。当前常见类型包括：
+
+- `system`
+- `shortcut`
+- `script`
+
+建议先把动作独立命名，再在多个 profile 里复用，避免一条绑定里塞太多上下文。
+
+## `profiles` 和 `bindings`
+
+profile 决定“这条规则在什么上下文里生效”。
+
+- 全局 profile：没有 `app_bundle_id`
+- 应用级 profile：带 `app_bundle_id`
+
+binding 决定“在这个上下文里，什么输入触发什么动作”。
+
+## 滚轮相关配置
+
+对于 `MX Master 4`，两个滚轮开关是运行时 daemon 配置：
+
+- `direction = "standard"`：把主滚轮和拇指轮改成更接近 Windows 风格
+- `direction = "natural"`：保留 macOS 原生方向
+- `smooth_scroll = true`：改写成短的 pixel-scroll burst
+- `smooth_scroll = false`：改写成单个 line-scroll event
+
+<AgentCallout title="先把结构写清楚，再做细节调参" eyebrow="Human Tip">
+  如果你还在排查权限、BLE 或 daemon 行为，先不要同时修改太多 `profiles.bindings`。先让一条最简单的系统动作命中，再逐步加应用级规则。
+</AgentCallout>

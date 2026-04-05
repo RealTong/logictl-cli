@@ -7,17 +7,17 @@ import { baseOptions } from '@/lib/layout.shared';
 import { homeContent } from '@/lib/home-content';
 import { HomeLayout } from 'fumadocs-ui/layouts/home';
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/en/')({
   component: Home,
 });
 
 function Home() {
-  const content = homeContent.zh;
+  const content = homeContent.en;
 
   return (
     <HomeLayout {...baseOptions()}>
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-16 pt-6 md:px-6 md:pb-20">
-        <HeroShell pathname="/" hero={content.hero} cta={content.cta} />
+        <HeroShell pathname="/en" hero={content.hero} cta={content.cta} />
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,0.84fr)_minmax(0,1.16fr)]">
           <div className="docs-surface-card docs-bg-layer docs-reveal flex flex-col gap-4 p-5 md:p-6">
@@ -77,7 +77,7 @@ function Home() {
 
         <section className="docs-surface-card docs-bg-layer docs-reveal flex flex-col gap-4 px-5 py-6 md:flex-row md:items-center md:justify-between md:px-6">
           <div className="max-w-2xl space-y-3">
-            <p className="docs-kicker">开始使用</p>
+            <p className="docs-kicker">Get Started</p>
             <h2 className="docs-title-lg">{content.footer.title}</h2>
             <p className="docs-lead">{content.footer.description}</p>
           </div>

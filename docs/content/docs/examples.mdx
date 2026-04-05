@@ -1,0 +1,86 @@
+---
+title: Examples
+description: 从系统动作到 Agent 工作流的实际绑定示例。
+icon: WandSparkles
+---
+
+<DocsPageHeader
+  eyebrow="Examples"
+  title="先抄一份能工作的，再慢慢改成你自己的手感"
+  description="这些例子都来自当前仓库里的示例配置和常见桌面工作流。"
+/>
+
+## 全局桌面控制
+
+<ConfigBlock title="Mission Control and desktop movement">
+[[profiles]]
+id = "global"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "gesture_button_down"
+  action = "mission_control"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(up)"
+  action = "app_expose"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(left)"
+  action = "previous_desktop"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(right)"
+  action = "next_desktop"
+</ConfigBlock>
+
+## 应用级关闭标签
+
+<ConfigBlock title="Close tab in Chrome only">
+[[profiles]]
+id = "chrome"
+app_bundle_id = "com.google.Chrome"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(down)"
+  action = "close_tab"
+</ConfigBlock>
+
+## 侧键浏览历史
+
+<ConfigBlock title="Back and forward">
+[[actions]]
+id = "navigate_back"
+type = "shortcut"
+keys = ["cmd", "["]
+
+[[actions]]
+id = "navigate_forward"
+type = "shortcut"
+keys = ["cmd", "]"]
+</ConfigBlock>
+
+## Agent 入口示意
+
+<ConfigBlock title="Route a gesture into your own workflow">
+[[actions]]
+id = "agent_review"
+type = "script"
+command = "agent.review_selection"
+
+[[profiles]]
+id = "global"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(right)"
+  action = "agent_review"
+</ConfigBlock>
+
+<AgentCallout title="先从本地脚本入口开始" eyebrow="Agent-first">
+  把 Agent 工作流先包装成你能单独执行和单独排错的命令，再把它接到手势上。这样出问题时，你可以先确认命令本身是否正常。
+</AgentCallout>

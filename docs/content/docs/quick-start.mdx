@@ -1,0 +1,65 @@
+---
+title: Quick Start
+description: 完成首次构建、权限检查、设备识别和 daemon 启动。
+icon: Rocket
+---
+
+<DocsPageHeader
+  eyebrow="Quick Start"
+  title="先让一条绑定稳定触发，再继续扩展"
+  description="首次运行的目标不是一次配完整套规则，而是验证构建、权限、设备识别和事件输出都处于可工作的状态。"
+/>
+
+## 1. 构建并初始化
+
+<CommandBlock title="Build and initialize">
+mkdir -p ./bin
+go build -o ./bin/logictl ./cmd/logictl
+./bin/logictl init
+./bin/logictl validate
+</CommandBlock>
+
+## 2. 检查权限和设备
+
+<CommandBlock title="Doctor and device visibility">
+./bin/logictl doctor
+./bin/logictl devices list
+./bin/logictl test event
+</CommandBlock>
+
+`doctor` 会同时告诉你：
+
+- 当前读取的是哪份配置文件
+- `Accessibility` 是否已授予
+- `Input Monitoring` 是否已授予
+- daemon 当前是否可连接
+
+## 3. 启动稳定的后台二进制
+
+开发时请不要用 `go run` 管理后台 daemon 生命周期。稳定流程是：
+
+<CommandBlock title="Install and start daemon">
+./bin/logictl daemon install
+./bin/logictl daemon start
+./bin/logictl daemon status
+</CommandBlock>
+
+## 4. macOS 权限注意点
+
+如果 `daemon start` 报权限错误，优先检查：
+
+- `~/.config/logictl/state/logictl-daemon` 是否在 `Input Monitoring` 中被授予权限
+- 当前终端或当前构建产物是否在 `Accessibility` 中可注入事件
+
+<AgentCallout title="为什么要用安装后的 daemon 二进制？" eyebrow="Human Tip">
+  `daemon install` 会把你当前构建好的二进制复制到固定路径。之后 `daemon start` 和 `daemon restart` 只会使用那份稳定路径，而不是每次跟着当前工作目录变。
+</AgentCallout>
+
+## 5. 第一次成功的标准
+
+满足下面几条，就可以进入配置和手势调优了：
+
+- `./bin/logictl doctor` 没有关键权限缺失
+- `./bin/logictl devices list` 能看到目标设备
+- `./bin/logictl test event` 能看到按键或手势事件
+- `./bin/logictl daemon status` 返回 `running`

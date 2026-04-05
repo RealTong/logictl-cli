@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { LanguageSwitcher } from '@/components/language-switcher';
 
 type DocsPageHeaderProps = {
   title: string;
   description?: ReactNode;
   eyebrow?: string;
   labels?: string[];
+  pathname?: string;
   actions?: ReactNode;
   children?: ReactNode;
   className?: string;
@@ -16,6 +18,7 @@ export function DocsPageHeader({
   description,
   eyebrow,
   labels,
+  pathname,
   actions,
   children,
   className,
@@ -38,7 +41,12 @@ export function DocsPageHeader({
           ))}
         </div>
       ) : null}
-      {actions ? <div className="docs-page-header-actions">{actions}</div> : null}
+      {pathname || actions ? (
+        <div className="docs-page-header-actions">
+          {pathname ? <LanguageSwitcher pathname={pathname} /> : null}
+          {actions}
+        </div>
+      ) : null}
       {children ? <div className="docs-callout-body">{children}</div> : null}
     </header>
   );

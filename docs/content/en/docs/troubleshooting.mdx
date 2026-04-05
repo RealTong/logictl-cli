@@ -1,0 +1,69 @@
+---
+title: Troubleshooting
+description: Permissions, BLE notes, daemon binary paths, and event debugging.
+icon: ShieldAlert
+---
+
+<DocsPageHeader
+  eyebrow="Troubleshooting"
+  title="Figure out which layer is failing: permissions, device capture, daemon, or rules"
+  description="Most “it does not trigger” problems are not caused by the same thing. Split the problem by layer first."
+/>
+
+## Permission layer
+
+Start by checking:
+
+- `Accessibility`
+- `Input Monitoring`
+
+If you installed the background daemon, make sure the path with permission is the stable daemon binary:
+
+`~/.config/logictl/state/logictl-daemon`
+
+## Daemon layer
+
+Use these commands to inspect background state:
+
+<CommandBlock title="Daemon status">
+./bin/logictl daemon status
+./bin/logictl reload
+</CommandBlock>
+
+Common mistakes:
+
+- rebuilding `./bin/logictl` but not re-running `daemon install`
+- assuming `reload` updates the installed daemon binary
+- using `go run` to manage daemon lifecycle
+
+## Device layer
+
+`MX Master 4` over BLE exposes a shared HID path. The daemon now uses native macOS `IOHIDManager` capture for that layout so it does not seize the primary pointer by opening the shared path directly.
+
+If the mouse becomes unstable or unreadable:
+
+- check current connection mode and system device state
+- then inspect `devices list` and `doctor`
+
+## Rule layer
+
+<CommandBlock title="Inspect events before changing config">
+./bin/logictl test event
+</CommandBlock>
+
+If `test event` is already wrong, do not start by rewriting config. First verify:
+
+- the device is visible
+- permissions are granted
+- gesture semantics already appear in the normalized event stream
+
+## Fast diagnosis order
+
+1. `./bin/logictl doctor`
+2. `./bin/logictl devices list`
+3. `./bin/logictl test event`
+4. `./bin/logictl daemon status`
+
+<AgentCallout title="When build and runtime both look healthy" eyebrow="Human Tip">
+  If a binding fails only in one application, check `app_bundle_id`, profile scope, and whether another higher-priority rule is matching first.
+</AgentCallout>
