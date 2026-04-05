@@ -1,0 +1,81 @@
+---
+title: Configuration
+description: Understand how devices, actions, profiles, and bindings fit together.
+icon: FileCode
+---
+
+<DocsPageHeader
+  eyebrow="Configuration"
+  title="Describe the device, name the actions, then decide where each rule should apply"
+  description="The power of the config is not the TOML itself. It is the fact that device capabilities, executable actions, and app-aware bindings stay clearly separated."
+/>
+
+## Top-level structure
+
+- `[[devices]]` describes device matching, capability aliases, and wheel behavior
+- `[[actions]]` defines reusable system, shortcut, or script actions
+- `[[profiles]]` defines where rules apply, globally or per app
+- `[[profiles.bindings]]` maps a device trigger to an action inside that profile
+
+<ConfigBlock title="Sample structure" path="~/.config/logictl/config.toml">
+[[devices]]
+id = "mx-master-4"
+match_vendor_id = 1133
+match_product_id = 45122
+
+  [devices.scroll]
+  direction = "standard"
+  smooth_scroll = false
+
+[[actions]]
+id = "mission_control"
+type = "system"
+system = "mission_control"
+
+[[profiles]]
+id = "global"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "gesture_button_down"
+  action = "mission_control"
+</ConfigBlock>
+
+## `devices`
+
+The device block handles two jobs:
+
+- identify which Logitech device this config should target
+- expose semantic triggers such as `gesture_button`, `back_button`, `wheel_up`, or `thumb_wheel_left`
+
+## `actions`
+
+Actions are reusable targets. Common types are:
+
+- `system`
+- `shortcut`
+- `script`
+
+Name actions once, then reuse them from multiple bindings instead of hardcoding behavior into every rule.
+
+## `profiles` and `bindings`
+
+Profiles answer where a rule applies.
+
+- global profile: no `app_bundle_id`
+- app profile: includes `app_bundle_id`
+
+Bindings answer what input should trigger what action inside that scope.
+
+## Wheel settings
+
+For `MX Master 4`, two wheel settings are live daemon config:
+
+- `direction = "standard"`: rewrites wheel direction toward a Windows-like feel
+- `direction = "natural"`: leaves native macOS direction intact
+- `smooth_scroll = true`: rewrites ticks into short pixel-scroll bursts
+- `smooth_scroll = false`: rewrites ticks as single line-scroll events
+
+<AgentCallout title="Get the shape right before you tune the details" eyebrow="Human Tip">
+  If you are still debugging permissions, BLE capture, or daemon lifecycle, keep the binding set small. Make one simple system action work first, then add app-specific rules.
+</AgentCallout>

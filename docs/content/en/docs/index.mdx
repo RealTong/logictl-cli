@@ -1,0 +1,45 @@
+---
+title: Overview
+description: The main entry into the logictl docs, from first run to daily bindings.
+icon: PanelsTopLeft
+---
+
+<DocsPageHeader
+  eyebrow="Overview"
+  title="Get the input path working first. Then move your frequent actions onto the mouse."
+  description="logictl is not trying to be a louder control panel. It is trying to keep the path from input to action local, short, and readable."
+  labels={["macOS", "CLI + daemon", "MX Master 4"]}
+>
+  This page tells you where to go next. The detailed behavior lives in configuration, gestures, troubleshooting, and examples.
+</DocsPageHeader>
+
+## Start here
+
+<Cards>
+  <Card title="Quick Start" href="/en/docs/quick-start">
+    Build the CLI, verify permissions, inspect events, and start the daemon.
+  </Card>
+  <Card title="Configuration" href="/en/docs/configuration">
+    Understand how `devices`, `actions`, and `profiles.bindings` fit together.
+  </Card>
+  <Card title="Gestures" href="/en/docs/gestures">
+    Review `gesture_button_down`, release-time gesture resolution, and the four directions.
+  </Card>
+  <Card title="Troubleshooting" href="/en/docs/troubleshooting">
+    Permission issues, BLE notes, daemon binary paths, and `test event` all live here.
+  </Card>
+  <Card title="Examples" href="/en/docs/examples">
+    Start from working examples for Mission Control, desktop switching, and agent flows.
+  </Card>
+</Cards>
+
+## Suggested reading order
+
+1. Run through [Quick Start](/en/docs/quick-start) until `doctor`, `devices list`, and `test event` all behave normally.
+2. Open [Configuration](/en/docs/configuration) and get the shape of `devices`, `actions`, and `profiles` straight.
+3. If your main focus is the gesture button, continue with [Gestures](/en/docs/gestures).
+4. If behavior still feels unstable on hardware, go straight to [Troubleshooting](/en/docs/troubleshooting).
+
+<AgentCallout title="Connect agent workflows after the system path is stable" eyebrow="Agent-first">
+  First make sure system actions and shortcuts are predictable. Then route gestures into AI or agent commands once the lower layers are known-good.
+</AgentCallout>

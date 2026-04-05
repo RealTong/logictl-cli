@@ -1,0 +1,86 @@
+---
+title: Examples
+description: Real bindings for system actions, app-specific rules, and agent workflows.
+icon: WandSparkles
+---
+
+<DocsPageHeader
+  eyebrow="Examples"
+  title="Start from a working pattern, then tune it to your own workflow"
+  description="These examples are drawn from the current sample config and the kinds of actions you are likely to repeat every day."
+/>
+
+## Global desktop control
+
+<ConfigBlock title="Mission Control and desktop movement">
+[[profiles]]
+id = "global"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "gesture_button_down"
+  action = "mission_control"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(up)"
+  action = "app_expose"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(left)"
+  action = "previous_desktop"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(right)"
+  action = "next_desktop"
+</ConfigBlock>
+
+## App-specific tab closing
+
+<ConfigBlock title="Close a Chrome tab only">
+[[profiles]]
+id = "chrome"
+app_bundle_id = "com.google.Chrome"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(down)"
+  action = "close_tab"
+</ConfigBlock>
+
+## Side-button history navigation
+
+<ConfigBlock title="Back and forward">
+[[actions]]
+id = "navigate_back"
+type = "shortcut"
+keys = ["cmd", "["]
+
+[[actions]]
+id = "navigate_forward"
+type = "shortcut"
+keys = ["cmd", "]"]
+</ConfigBlock>
+
+## Agent entry-point sketch
+
+<ConfigBlock title="Route a gesture into your own workflow">
+[[actions]]
+id = "agent_review"
+type = "script"
+command = "agent.review_selection"
+
+[[profiles]]
+id = "global"
+
+  [[profiles.bindings]]
+  device = "mx-master-4"
+  trigger = "hold(gesture_button)+move(right)"
+  action = "agent_review"
+</ConfigBlock>
+
+<AgentCallout title="Start with a local command boundary" eyebrow="Agent-first">
+  Wrap the agent workflow in a command you can run and debug on its own first. Then attach the gesture once the command path is already stable.
+</AgentCallout>
