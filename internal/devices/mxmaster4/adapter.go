@@ -45,7 +45,19 @@ func (a *Adapter) Decode(report events.RawReport) ([]events.DeviceEvent, error) 
 func (a *Adapter) decodeStandardReport(report events.RawReport, decoded decodedReport) []events.DeviceEvent {
 	out := make([]events.DeviceEvent, 0, len(buttonSpecs)+4)
 
-	changed := a.pressedButtons ^ decoded.buttons
+	previousButtons := a.pressedButtons
+	changed := previousButtons ^ decoded.buttons
+	hasMotion := decoded.deltaX != 0 || decoded.deltaY != 0
+	hadGestureHeld := previousButtons&buttonMaskGesture != 0
+	hasGestureHeld := decoded.buttons&buttonMaskGesture != 0
+
+	// Some gesture-button releases carry the final pointer delta in the same
+	// report. Emit that motion before the release so the normalizer can still
+	// resolve the directional gesture.
+	if hasMotion && hadGestureHeld && !hasGestureHeld {
+		out = append(out, pointerMoveEvent(report, decoded.deltaX, decoded.deltaY))
+	}
+
 	if changed&buttonMaskHaptic != 0 && decoded.buttons&buttonMaskHaptic != 0 {
 		out = append(out, triggerEvent(report, "haptic_panel_press"))
 	}
@@ -61,7 +73,7 @@ func (a *Adapter) decodeStandardReport(report events.RawReport, decoded decodedR
 	}
 	a.pressedButtons = decoded.buttons
 
-	if decoded.buttons&buttonMaskGesture != 0 && (decoded.deltaX != 0 || decoded.deltaY != 0) {
+	if hasMotion && hasGestureHeld {
 		out = append(out, pointerMoveEvent(report, decoded.deltaX, decoded.deltaY))
 	}
 	out = append(out, emitTicks(report, decoded.wheel, "wheel_down", "wheel_up")...)

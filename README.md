@@ -57,7 +57,7 @@ English | [简体中文](README_ZH.md)
 
 The sample config includes:
 
-- `gesture_button_down` to `mission_control`
+- `gesture_button_down` to `mission_control` when the gesture button is released without a directional gesture
 - `hold(gesture_button)+move(up)` to `app_expose`
 - `hold(gesture_button)+move(left)` to `previous_desktop`
 - `hold(gesture_button)+move(right)` to `next_desktop`
@@ -67,6 +67,8 @@ The sample config includes:
 - `hold(gesture_button)+move(down)` in `com.google.Chrome` to `cmd+w`
 - `devices.scroll.direction = "standard"`
 - `devices.scroll.smooth_scroll = true`
+
+`gesture_button_down` bindings are deferred until `gesture_button_up`. If a directional `hold(gesture_button)+move(...)` gesture is recognized while the button is held, that directional action replaces the deferred tap action and fires on release instead.
 
 `wheel_up`, `wheel_down`, `thumb_wheel_left`, `thumb_wheel_right`, `mode_shift_button_press`, `wheel_mode_ratchet`, and `wheel_mode_free_spin` are also exposed as semantic triggers for custom bindings.
 

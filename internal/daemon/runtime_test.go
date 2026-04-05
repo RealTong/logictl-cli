@@ -31,6 +31,15 @@ func (s fakeEventSource) Stream(context.Context) (<-chan events.DeviceEvent, <-c
 	return eventsCh, errCh
 }
 
+type liveEventSource struct {
+	events chan events.DeviceEvent
+	errs   chan error
+}
+
+func (s liveEventSource) Stream(context.Context) (<-chan events.DeviceEvent, <-chan error) {
+	return s.events, s.errs
+}
+
 type fakeMatcher struct {
 	action      config.Action
 	err         error
@@ -50,6 +59,15 @@ type fakeExecutor struct {
 
 func (e *fakeExecutor) Execute(_ context.Context, action config.Action) error {
 	e.actions = append(e.actions, action)
+	return nil
+}
+
+type signalingExecutor struct {
+	actions chan config.Action
+}
+
+func (e *signalingExecutor) Execute(_ context.Context, action config.Action) error {
+	e.actions <- action
 	return nil
 }
 
@@ -158,6 +176,131 @@ func TestRuntimeDispatchesMatchedAction(t *testing.T) {
 	}
 }
 
+func TestRuntimeExecutesGestureButtonTapActionOnRelease(t *testing.T) {
+	source := liveEventSource{
+		events: make(chan events.DeviceEvent),
+		errs:   make(chan error),
+	}
+	executor := &signalingExecutor{actions: make(chan config.Action, 2)}
+	runtime := NewRuntimeWithDependencies(RuntimeDependencies{
+		Source:      source,
+		Executor:    executor,
+		AppResolver: fakeActiveAppResolver{bundleID: "com.apple.finder"},
+	})
+
+	if err := runtime.ApplyConfig(&config.Config{
+		Devices: []config.Device{{ID: "mx-master-4"}},
+		Actions: []config.Action{
+			{ID: "mission_control", Type: "system", System: "mission_control"},
+		},
+		Profiles: []config.Profile{
+			{
+				ID: "global",
+				Bindings: []config.Binding{
+					{
+						Device:  "mx-master-4",
+						Trigger: "gesture_button_down",
+						Action:  "mission_control",
+					},
+				},
+			},
+		},
+	}); err != nil {
+		t.Fatalf("ApplyConfig returned error: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runErrs := make(chan error, 1)
+	go func() {
+		runErrs <- runtime.Run(ctx)
+	}()
+
+	source.events <- events.DeviceEvent{DeviceID: "mx-master-4", Control: "gesture_button", Kind: events.ButtonDown}
+	assertNoExecutedAction(t, executor.actions)
+
+	source.events <- events.DeviceEvent{DeviceID: "mx-master-4", Control: "gesture_button", Kind: events.ButtonUp}
+	assertExecutedAction(t, executor.actions, "mission_control")
+
+	close(source.events)
+	close(source.errs)
+
+	if err := <-runErrs; err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+}
+
+func TestRuntimeGestureButtonDirectionalActionOverridesTapActionUntilRelease(t *testing.T) {
+	source := liveEventSource{
+		events: make(chan events.DeviceEvent),
+		errs:   make(chan error),
+	}
+	executor := &signalingExecutor{actions: make(chan config.Action, 2)}
+	runtime := NewRuntimeWithDependencies(RuntimeDependencies{
+		Source:      source,
+		Executor:    executor,
+		AppResolver: fakeActiveAppResolver{bundleID: "com.apple.finder"},
+	})
+
+	if err := runtime.ApplyConfig(&config.Config{
+		Devices: []config.Device{{ID: "mx-master-4"}},
+		Actions: []config.Action{
+			{ID: "mission_control", Type: "system", System: "mission_control"},
+			{ID: "next_desktop", Type: "system", System: "next_desktop"},
+		},
+		Profiles: []config.Profile{
+			{
+				ID: "global",
+				Bindings: []config.Binding{
+					{
+						Device:  "mx-master-4",
+						Trigger: "gesture_button_down",
+						Action:  "mission_control",
+					},
+					{
+						Device:  "mx-master-4",
+						Trigger: "hold(gesture_button)+move(right)",
+						Action:  "next_desktop",
+					},
+				},
+			},
+		},
+	}); err != nil {
+		t.Fatalf("ApplyConfig returned error: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runErrs := make(chan error, 1)
+	go func() {
+		runErrs <- runtime.Run(ctx)
+	}()
+
+	source.events <- events.DeviceEvent{DeviceID: "mx-master-4", Control: "gesture_button", Kind: events.ButtonDown}
+	assertNoExecutedAction(t, executor.actions)
+
+	source.events <- events.DeviceEvent{
+		DeviceID: "mx-master-4",
+		Control:  "gesture_button",
+		Kind:     events.Gesture,
+		Gesture:  "hold(gesture_button)+move(right)",
+	}
+	assertNoExecutedAction(t, executor.actions)
+
+	source.events <- events.DeviceEvent{DeviceID: "mx-master-4", Control: "gesture_button", Kind: events.ButtonUp}
+	assertExecutedAction(t, executor.actions, "next_desktop")
+	assertNoExecutedAction(t, executor.actions)
+
+	close(source.events)
+	close(source.errs)
+
+	if err := <-runErrs; err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+}
+
 func TestRuntimeApplyConfigBuildsScrollSettings(t *testing.T) {
 	runtime := NewRuntimeWithDependencies(RuntimeDependencies{})
 	cfg := sampleRuntimeConfig("global")
@@ -242,6 +385,29 @@ func TestRuntimeQueuesScrollRewriteBeforeResolvingActiveApp(t *testing.T) {
 
 var _ platformmacos.ScrollRewriter = (*fakeScrollRewriter)(nil)
 var _ platformmacos.ScrollRewriter = (*orderCheckingScrollRewriter)(nil)
+
+func assertNoExecutedAction(t *testing.T, actions <-chan config.Action) {
+	t.Helper()
+
+	select {
+	case action := <-actions:
+		t.Fatalf("unexpected executed action %#v", action)
+	case <-time.After(100 * time.Millisecond):
+	}
+}
+
+func assertExecutedAction(t *testing.T, actions <-chan config.Action, want string) {
+	t.Helper()
+
+	select {
+	case action := <-actions:
+		if action.ID != want {
+			t.Fatalf("executed action ID = %q, want %q", action.ID, want)
+		}
+	case <-time.After(time.Second):
+		t.Fatalf("timed out waiting for action %q", want)
+	}
+}
 
 func sampleRuntimeConfig(profileID string) *config.Config {
 	return &config.Config{

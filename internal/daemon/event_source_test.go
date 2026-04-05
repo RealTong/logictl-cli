@@ -193,3 +193,84 @@ func TestMXMaster4EventSourceStreamUsesNativePassiveCaptureForSharedPrimaryPoint
 		t.Fatalf("Open() spec = %#v, want primary mouse usage", nativeFactory.openSpec)
 	}
 }
+
+func TestMXMaster4EventSourcePreservesGestureMotionFromReleaseReport(t *testing.T) {
+	nativeFactory := &fakeNativeSourceFactory{
+		reports: []events.RawReport{
+			{
+				At:    time.Unix(1, 0),
+				Bytes: []byte{0x02, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			},
+			{
+				At:    time.Unix(2, 0),
+				Bytes: []byte{0x02, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x00},
+			},
+		},
+	}
+	source := mxMaster4EventSource{hidClient: hidapi.FakeClient{
+		Devices: []hidapi.DeviceInfo{
+			{
+				Path:      "ble-shared",
+				VendorID:  0x046d,
+				ProductID: 0xb042,
+				UsagePage: 0x0001,
+				Usage:     0x0002,
+				Product:   "MX Master 4",
+			},
+			{
+				Path:      "ble-shared",
+				VendorID:  0x046d,
+				ProductID: 0xb042,
+				UsagePage: 0x0001,
+				Usage:     0x0001,
+				Product:   "MX Master 4",
+			},
+			{
+				Path:      "ble-shared",
+				VendorID:  0x046d,
+				ProductID: 0xb042,
+				UsagePage: 0xff43,
+				Usage:     0x0202,
+				Product:   "MX Master 4",
+			},
+		},
+	}, openNative: nativeFactory}
+
+	eventsCh, errs := source.Stream(context.Background())
+
+	var got []events.DeviceEvent
+	for event := range eventsCh {
+		got = append(got, event)
+	}
+
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("Stream() reported error: %v", err)
+		}
+	}
+
+	if !containsDeviceEvent(got, func(event events.DeviceEvent) bool {
+		return event.Kind == events.ButtonHold && event.Control == "gesture_button"
+	}) {
+		t.Fatalf("stream = %#v, want gesture_button hold before release", got)
+	}
+	if !containsDeviceEvent(got, func(event events.DeviceEvent) bool {
+		return event.Gesture == "hold(gesture_button)+move(right)"
+	}) {
+		t.Fatalf("stream = %#v, want hold(gesture_button)+move(right) from release report motion", got)
+	}
+	if !containsDeviceEvent(got, func(event events.DeviceEvent) bool {
+		return event.Kind == events.ButtonUp && event.Control == "gesture_button"
+	}) {
+		t.Fatalf("stream = %#v, want gesture_button up", got)
+	}
+}
+
+func containsDeviceEvent(eventsList []events.DeviceEvent, predicate func(events.DeviceEvent) bool) bool {
+	for _, event := range eventsList {
+		if predicate(event) {
+			return true
+		}
+	}
+	return false
+}
