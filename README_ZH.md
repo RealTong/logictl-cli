@@ -57,7 +57,7 @@
 
 示例配置当前包含：
 
-- `gesture_button_down` 映射到 `mission_control`
+- `gesture_button_down` 在未形成方向手势时，于松开后触发 `mission_control`
 - `hold(gesture_button)+move(up)` 映射到 `app_expose`
 - `hold(gesture_button)+move(left)` 映射到 `previous_desktop`
 - `hold(gesture_button)+move(right)` 映射到 `next_desktop`
@@ -67,6 +67,8 @@
 - 在 `com.google.Chrome` 中，`hold(gesture_button)+move(down)` 映射到 `cmd+w`
 - `devices.scroll.direction = "standard"`
 - `devices.scroll.smooth_scroll = true`
+
+`gesture_button_down` 绑定现在会延迟到 `gesture_button_up` 时再决定是否执行；如果按住期间识别到了 `hold(gesture_button)+move(...)`，那么释放时只会执行方向手势对应的动作，不会再执行默认的 tap 动作。
 
 `wheel_up`、`wheel_down`、`thumb_wheel_left`、`thumb_wheel_right`、`mode_shift_button_press`、`wheel_mode_ratchet` 和 `wheel_mode_free_spin` 也都已经暴露为可绑定的语义触发器。
 

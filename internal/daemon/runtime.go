@@ -62,6 +62,21 @@ type Runtime struct {
 	scrollSettings map[string]config.ScrollConfig
 }
 
+const gestureButtonControl = "gesture_button"
+
+type gestureActionKey struct {
+	deviceID string
+	control  string
+}
+
+type pendingGestureAction struct {
+	tapAction        config.Action
+	hasTapAction     bool
+	gestureAction    config.Action
+	hasGestureAction bool
+	gestureSeen      bool
+}
+
 func NewRuntime() *Runtime {
 	return NewRuntimeWithDependencies(RuntimeDependencies{})
 }
@@ -164,6 +179,7 @@ func (r *Runtime) Run(ctx context.Context) error {
 
 	eventsCh, errs := r.source.Stream(ctx)
 	rewriterErrs := startScrollRewriter(ctx, r.scrollRewriter)
+	pendingGestureActions := make(map[gestureActionKey]pendingGestureAction)
 	for eventsCh != nil || errs != nil {
 		select {
 		case event, ok := <-eventsCh:
@@ -190,6 +206,19 @@ func (r *Runtime) Run(ctx context.Context) error {
 			}
 
 			action, err := matcher.Match(rules.Context{AppBundleID: appBundleID}, event)
+			plannedActions, handled, planErr := planGestureButtonActions(pendingGestureActions, event, action, err)
+			if planErr != nil {
+				return planErr
+			}
+			if handled {
+				for _, planned := range plannedActions {
+					if err := r.executor.Execute(ctx, planned); err != nil {
+						return err
+					}
+				}
+				continue
+			}
+
 			if err != nil {
 				if errors.Is(err, rules.ErrNoBinding) || errors.Is(err, rules.ErrAmbiguousBinding) {
 					continue
@@ -222,6 +251,98 @@ func (r *Runtime) Run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func planGestureButtonActions(pending map[gestureActionKey]pendingGestureAction, event events.DeviceEvent, action config.Action, matchErr error) ([]config.Action, bool, error) {
+	key, ok := gestureActionEventKey(event)
+	if !ok {
+		return nil, false, nil
+	}
+
+	switch event.Kind {
+	case events.ButtonDown:
+		state := pendingGestureAction{}
+		if err := storeMatchedTapAction(&state, action, matchErr); err != nil {
+			return nil, false, err
+		}
+		pending[key] = state
+		return nil, true, nil
+	case events.Gesture:
+		state := pending[key]
+		state.gestureSeen = true
+		state.hasTapAction = false
+		if err := storeMatchedDirectionalAction(&state, action, matchErr); err != nil {
+			return nil, false, err
+		}
+		pending[key] = state
+		return nil, true, nil
+	case events.ButtonUp:
+		state, exists := pending[key]
+		if !exists {
+			return nil, false, nil
+		}
+		delete(pending, key)
+
+		switch {
+		case state.gestureSeen && state.hasGestureAction:
+			return []config.Action{state.gestureAction}, true, nil
+		case state.gestureSeen:
+			return nil, true, nil
+		case state.hasTapAction:
+			return []config.Action{state.tapAction}, true, nil
+		case matchErr == nil:
+			return []config.Action{action}, true, nil
+		case errors.Is(matchErr, rules.ErrNoBinding), errors.Is(matchErr, rules.ErrAmbiguousBinding):
+			return nil, true, nil
+		default:
+			return nil, false, matchErr
+		}
+	default:
+		return nil, false, nil
+	}
+}
+
+func gestureActionEventKey(event events.DeviceEvent) (gestureActionKey, bool) {
+	if event.Control != gestureButtonControl {
+		return gestureActionKey{}, false
+	}
+
+	switch event.Kind {
+	case events.ButtonDown, events.ButtonUp, events.Gesture:
+		return gestureActionKey{
+			deviceID: event.DeviceID,
+			control:  event.Control,
+		}, true
+	default:
+		return gestureActionKey{}, false
+	}
+}
+
+func storeMatchedTapAction(state *pendingGestureAction, action config.Action, matchErr error) error {
+	switch {
+	case matchErr == nil:
+		state.tapAction = action
+		state.hasTapAction = true
+		return nil
+	case errors.Is(matchErr, rules.ErrNoBinding), errors.Is(matchErr, rules.ErrAmbiguousBinding):
+		return nil
+	default:
+		return matchErr
+	}
+}
+
+func storeMatchedDirectionalAction(state *pendingGestureAction, action config.Action, matchErr error) error {
+	switch {
+	case matchErr == nil:
+		state.gestureAction = action
+		state.hasGestureAction = true
+		return nil
+	case errors.Is(matchErr, rules.ErrNoBinding), errors.Is(matchErr, rules.ErrAmbiguousBinding):
+		state.hasGestureAction = false
+		return nil
+	default:
+		return matchErr
+	}
 }
 
 func (r *Runtime) Reload(context.Context) (ipc.Status, error) {

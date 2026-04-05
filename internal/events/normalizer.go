@@ -2,24 +2,35 @@ package events
 
 import "fmt"
 
-const defaultGestureDistance = 32
+const (
+	defaultGestureDistance        = 32
+	defaultHorizontalAxisWeight   = 1.25
+	defaultVerticalDominanceRatio = 1.1
+)
 
 type NormalizeConfig struct {
-	GestureDistance int
+	GestureDistance        int
+	HorizontalAxisWeight   float64
+	VerticalDominanceRatio float64
 }
 
 type Normalizer struct {
-	cfg            NormalizeConfig
-	heldControl    string
-	holdEmitted    bool
-	gestureEmitted bool
-	accumulatedX   int
-	accumulatedY   int
+	cfg          NormalizeConfig
+	heldControl  string
+	holdEmitted  bool
+	accumulatedX int
+	accumulatedY int
 }
 
 func NewNormalizer(cfg NormalizeConfig) *Normalizer {
 	if cfg.GestureDistance <= 0 {
 		cfg.GestureDistance = defaultGestureDistance
+	}
+	if cfg.HorizontalAxisWeight <= 0 {
+		cfg.HorizontalAxisWeight = defaultHorizontalAxisWeight
+	}
+	if cfg.VerticalDominanceRatio <= 0 {
+		cfg.VerticalDominanceRatio = defaultVerticalDominanceRatio
 	}
 	return &Normalizer{cfg: cfg}
 }
@@ -38,17 +49,30 @@ func (n *Normalizer) Push(event DeviceEvent) []DeviceEvent {
 	case ButtonDown:
 		n.heldControl = event.Control
 		n.holdEmitted = false
-		n.gestureEmitted = false
 		n.accumulatedX = 0
 		n.accumulatedY = 0
 		return []DeviceEvent{event}
 	case ButtonUp:
+		out := make([]DeviceEvent, 0, 2)
+		if n.heldControl != "" && n.gestureMagnitude(n.accumulatedX, n.accumulatedY) >= float64(n.cfg.GestureDistance) {
+			direction := n.gestureDirection(n.accumulatedX, n.accumulatedY)
+			if direction != "" {
+				out = append(out, DeviceEvent{
+					DeviceID: event.DeviceID,
+					At:       event.At,
+					Control:  n.heldControl,
+					Kind:     Gesture,
+					Gesture:  fmt.Sprintf("hold(%s)+move(%s)", n.heldControl, direction),
+				})
+			}
+		}
+		out = append(out, event)
+
 		n.heldControl = ""
 		n.holdEmitted = false
-		n.gestureEmitted = false
 		n.accumulatedX = 0
 		n.accumulatedY = 0
-		return []DeviceEvent{event}
+		return out
 	case PointerMove:
 		if n.heldControl == "" {
 			return nil
@@ -68,22 +92,6 @@ func (n *Normalizer) Push(event DeviceEvent) []DeviceEvent {
 		n.accumulatedX += event.DeltaX
 		n.accumulatedY += event.DeltaY
 
-		if !n.gestureEmitted &&
-			maxAbs(n.accumulatedX, n.accumulatedY) >= n.cfg.GestureDistance {
-			n.gestureEmitted = true
-			direction := gestureDirection(n.accumulatedX, n.accumulatedY)
-			if direction == "" {
-				return out
-			}
-			out = append(out, DeviceEvent{
-				DeviceID: event.DeviceID,
-				At:       event.At,
-				Control:  n.heldControl,
-				Kind:     Gesture,
-				Gesture:  fmt.Sprintf("hold(%s)+move(%s)", n.heldControl, direction),
-			})
-		}
-
 		return out
 	default:
 		if event.Gesture != "" {
@@ -91,6 +99,15 @@ func (n *Normalizer) Push(event DeviceEvent) []DeviceEvent {
 		}
 		return nil
 	}
+}
+
+func (n *Normalizer) gestureMagnitude(x, y int) float64 {
+	horizontal := float64(abs(x)) * n.cfg.HorizontalAxisWeight
+	vertical := float64(abs(y))
+	if horizontal > vertical {
+		return horizontal
+	}
+	return vertical
 }
 
 func abs(value int) int {
@@ -107,20 +124,23 @@ func maxAbs(x, y int) int {
 	return abs(y)
 }
 
-func gestureDirection(x, y int) string {
+func (n *Normalizer) gestureDirection(x, y int) string {
+	horizontal := float64(abs(x)) * n.cfg.HorizontalAxisWeight
+	vertical := float64(abs(y))
+
 	switch {
-	case y > 0 && abs(y) >= abs(x):
+	case y > 0 && vertical >= horizontal*n.cfg.VerticalDominanceRatio:
 		return "down"
-	case y < 0 && x > 0:
-		return "left"
-	case y < 0 && x < 0:
-		return "right"
-	case y < 0:
+	case y < 0 && vertical >= horizontal*n.cfg.VerticalDominanceRatio:
 		return "up"
 	case x > 0:
 		return "right"
 	case x < 0:
 		return "left"
+	case y > 0:
+		return "down"
+	case y < 0:
+		return "up"
 	default:
 		return ""
 	}
