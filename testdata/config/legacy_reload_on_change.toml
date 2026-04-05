@@ -1,4 +1,5 @@
-unsupported = true
+[daemon]
+reload_on_change = true
 
 [[actions]]
 id = "close_tab"

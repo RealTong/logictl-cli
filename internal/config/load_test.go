@@ -49,3 +49,9 @@ func TestLoadFileRejectsUnknownKeys(t *testing.T) {
 		t.Fatal("LoadFile returned nil, want unknown key error")
 	}
 }
+
+func TestLoadFileRejectsLegacyReloadOnChangeKey(t *testing.T) {
+	if _, err := LoadFile(filepath.Join("..", "..", "testdata", "config", "legacy_reload_on_change.toml")); err == nil {
+		t.Fatal("LoadFile returned nil, want unsupported reload_on_change error")
+	}
+}

@@ -50,7 +50,12 @@ func (m *fakeDaemonServiceManager) Restart(context.Context) error {
 
 func TestDaemonStartCmdInvokesServiceManager(t *testing.T) {
 	manager := &fakeDaemonServiceManager{}
-	cmd := newDaemonStartCmd(fakeDaemonPreflight{}, manager)
+	paths := appcore.Paths{
+		ConfigFile: "/tmp/logictl/config.toml",
+		SocketFile: "/tmp/logictl/state/daemon.sock",
+		StateDir:   "/tmp/logictl/state",
+	}
+	cmd := newDaemonStartCmd(fakeDaemonPreflight{}, manager, paths)
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)
@@ -60,6 +65,16 @@ func TestDaemonStartCmdInvokesServiceManager(t *testing.T) {
 	}
 	if len(manager.calls) != 1 || manager.calls[0] != "start" {
 		t.Fatalf("manager.calls = %#v, want [start]", manager.calls)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Started LaunchAgent daemon.") {
+		t.Fatalf("output = %q, want expanded start status", out)
+	}
+	if !strings.Contains(out, "Config: /tmp/logictl/config.toml") {
+		t.Fatalf("output = %q, want config path", out)
+	}
+	if !strings.Contains(out, "Socket: /tmp/logictl/state/daemon.sock") {
+		t.Fatalf("output = %q, want socket path", out)
 	}
 }
 
@@ -79,11 +94,18 @@ func TestDaemonInstallCmdInvokesServiceManager(t *testing.T) {
 	if got := buf.String(); !strings.Contains(got, "/tmp/logictl-daemon") {
 		t.Fatalf("output = %q, want installed path", got)
 	}
+	if got := buf.String(); !strings.Contains(got, "Input Monitoring") {
+		t.Fatalf("output = %q, want permission guidance", got)
+	}
 }
 
 func TestDaemonRestartCmdInvokesServiceManager(t *testing.T) {
 	manager := &fakeDaemonServiceManager{}
-	cmd := newDaemonRestartCmd(fakeDaemonPreflight{}, manager)
+	paths := appcore.Paths{
+		ConfigFile: "/tmp/logictl/config.toml",
+		SocketFile: "/tmp/logictl/state/daemon.sock",
+	}
+	cmd := newDaemonRestartCmd(fakeDaemonPreflight{}, manager, paths)
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)
@@ -94,11 +116,18 @@ func TestDaemonRestartCmdInvokesServiceManager(t *testing.T) {
 	if len(manager.calls) != 1 || manager.calls[0] != "restart" {
 		t.Fatalf("manager.calls = %#v, want [restart]", manager.calls)
 	}
+	out := buf.String()
+	if !strings.Contains(out, "Restarted LaunchAgent daemon.") {
+		t.Fatalf("output = %q, want expanded restart status", out)
+	}
+	if !strings.Contains(out, "Config: /tmp/logictl/config.toml") {
+		t.Fatalf("output = %q, want config path", out)
+	}
 }
 
 func TestDaemonStartCmdRejectsPreflightFailures(t *testing.T) {
 	manager := &fakeDaemonServiceManager{}
-	cmd := newDaemonStartCmd(fakeDaemonPreflight{err: errors.New("unsafe path")}, manager)
+	cmd := newDaemonStartCmd(fakeDaemonPreflight{err: errors.New("unsafe path")}, manager, appcore.Paths{})
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)

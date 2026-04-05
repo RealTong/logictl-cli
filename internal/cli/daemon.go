@@ -34,13 +34,14 @@ type launchAgentServiceManager struct {
 }
 
 func newDaemonCmd(app *daemon.App) *cobra.Command {
+	paths := appcore.DefaultPaths()
 	return newDaemonCmdWithServiceManager(app, launchAgentServiceManager{
-		paths:      appcore.DefaultPaths(),
+		paths:      paths,
 		executable: os.Executable,
-	})
+	}, paths)
 }
 
-func newDaemonCmdWithServiceManager(app *daemon.App, manager daemonServiceManager) *cobra.Command {
+func newDaemonCmdWithServiceManager(app *daemon.App, manager daemonServiceManager, paths appcore.Paths) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "daemon",
 		Short: "Control the logictl daemon",
@@ -48,10 +49,10 @@ func newDaemonCmdWithServiceManager(app *daemon.App, manager daemonServiceManage
 
 	cmd.AddCommand(newDaemonInstallCmd(manager))
 	cmd.AddCommand(newDaemonRunCmd(app))
-	cmd.AddCommand(newDaemonStartCmd(app, manager))
+	cmd.AddCommand(newDaemonStartCmd(app, manager, paths))
 	cmd.AddCommand(newDaemonStatusCmd(app))
 	cmd.AddCommand(newDaemonStopCmd(manager))
-	cmd.AddCommand(newDaemonRestartCmd(app, manager))
+	cmd.AddCommand(newDaemonRestartCmd(app, manager, paths))
 	return cmd
 }
 
@@ -65,7 +66,9 @@ func newDaemonInstallCmd(manager daemonServiceManager) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "installed %s\n", installed)
+			fmt.Fprintf(cmd.OutOrStdout(), "Installed daemon binary: %s\n", installed)
+			fmt.Fprintf(cmd.OutOrStdout(), "If macOS asks for Input Monitoring, grant it to: %s\n", installed)
+			fmt.Fprintln(cmd.OutOrStdout(), "Next: logictl daemon start")
 			return nil
 		},
 	}
@@ -108,7 +111,7 @@ func newDaemonStatusCmd(app *daemon.App) *cobra.Command {
 	}
 }
 
-func newDaemonStartCmd(app daemonPreflighter, manager daemonServiceManager) *cobra.Command {
+func newDaemonStartCmd(app daemonPreflighter, manager daemonServiceManager, paths appcore.Paths) *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
 		Short: "Install and start the LaunchAgent-managed daemon",
@@ -120,7 +123,7 @@ func newDaemonStartCmd(app daemonPreflighter, manager daemonServiceManager) *cob
 			if err := manager.Start(cmd.Context()); err != nil {
 				return err
 			}
-			cmd.Println("started")
+			printDaemonReadyMessage(cmd.OutOrStdout(), "Started LaunchAgent daemon.", paths)
 			return nil
 		},
 	}
@@ -141,7 +144,7 @@ func newDaemonStopCmd(manager daemonServiceManager) *cobra.Command {
 	}
 }
 
-func newDaemonRestartCmd(app daemonPreflighter, manager daemonServiceManager) *cobra.Command {
+func newDaemonRestartCmd(app daemonPreflighter, manager daemonServiceManager, paths appcore.Paths) *cobra.Command {
 	return &cobra.Command{
 		Use:   "restart",
 		Short: "Restart the LaunchAgent-managed daemon",
@@ -153,10 +156,22 @@ func newDaemonRestartCmd(app daemonPreflighter, manager daemonServiceManager) *c
 			if err := manager.Restart(cmd.Context()); err != nil {
 				return err
 			}
-			cmd.Println("restarted")
+			printDaemonReadyMessage(cmd.OutOrStdout(), "Restarted LaunchAgent daemon.", paths)
 			return nil
 		},
 	}
+}
+
+func printDaemonReadyMessage(out io.Writer, title string, paths appcore.Paths) {
+	fmt.Fprintln(out, title)
+	if paths.ConfigFile != "" {
+		fmt.Fprintf(out, "Config: %s\n", paths.ConfigFile)
+	}
+	if paths.SocketFile != "" {
+		fmt.Fprintf(out, "Socket: %s\n", paths.SocketFile)
+	}
+	fmt.Fprintln(out, "Next: logictl daemon status")
+	fmt.Fprintln(out, "After editing config, run: logictl reload")
 }
 
 func (m launchAgentServiceManager) Install(ctx context.Context) (string, error) {

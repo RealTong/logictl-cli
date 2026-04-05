@@ -50,6 +50,7 @@ func newDoctorCmd(doctor platformDoctor, daemonReporter daemonStatusReporter, de
 				activeBundleID = "unavailable"
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Frontmost App: %s\n", activeBundleID)
+			fmt.Fprintf(cmd.OutOrStdout(), "Config Path: %s\n", configPath)
 			fmt.Fprintf(cmd.OutOrStdout(), "Config: %s\n", configStatus(configPath))
 			fmt.Fprintf(cmd.OutOrStdout(), "Daemon: %s\n", daemonStatusLabel(status))
 			return nil

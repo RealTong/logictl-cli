@@ -1,6 +1,3 @@
-[daemon]
-reload_on_change = true
-
 [[devices]]
 id = "mx-master-4"
 match_vendor_id = 1133

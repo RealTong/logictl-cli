@@ -61,6 +61,16 @@ func (r fakeActiveAppResolver) ActiveBundleID(context.Context) (string, error) {
 	return r.bundleID, nil
 }
 
+type observingActiveAppResolver struct {
+	bundleID string
+	called   bool
+}
+
+func (r *observingActiveAppResolver) ActiveBundleID(context.Context) (string, error) {
+	r.called = true
+	return r.bundleID, nil
+}
+
 type fakeScrollRewriter struct {
 	records []scrollRewriteRecord
 }
@@ -78,6 +88,28 @@ func (f *fakeScrollRewriter) Start(context.Context) error {
 
 func (f *fakeScrollRewriter) Record(deviceID, gesture string, settings config.ScrollConfig, at time.Time) {
 	f.records = append(f.records, scrollRewriteRecord{
+		deviceID: deviceID,
+		gesture:  gesture,
+		settings: settings,
+		at:       at,
+	})
+}
+
+type orderCheckingScrollRewriter struct {
+	t        *testing.T
+	resolver *observingActiveAppResolver
+	records  []scrollRewriteRecord
+}
+
+func (r *orderCheckingScrollRewriter) Start(context.Context) error {
+	return nil
+}
+
+func (r *orderCheckingScrollRewriter) Record(deviceID, gesture string, settings config.ScrollConfig, at time.Time) {
+	if r.resolver.called {
+		r.t.Fatalf("Record called after ActiveBundleID; want scroll rewrite queued before frontmost-app lookup")
+	}
+	r.records = append(r.records, scrollRewriteRecord{
 		deviceID: deviceID,
 		gesture:  gesture,
 		settings: settings,
@@ -178,7 +210,38 @@ func TestRuntimeRecordsWheelGesturesForScrollRewrite(t *testing.T) {
 	}
 }
 
+func TestRuntimeQueuesScrollRewriteBeforeResolvingActiveApp(t *testing.T) {
+	resolver := &observingActiveAppResolver{bundleID: "com.apple.finder"}
+	rewriter := &orderCheckingScrollRewriter{t: t, resolver: resolver}
+	runtime := NewRuntimeWithDependencies(RuntimeDependencies{
+		Source: fakeEventSource{events: []events.DeviceEvent{
+			{DeviceID: "mx-master-4", Gesture: "wheel_up", At: time.Unix(1, 0)},
+		}},
+		Matcher:        &fakeMatcher{err: rules.ErrNoBinding},
+		Executor:       &fakeExecutor{},
+		AppResolver:    resolver,
+		ScrollRewriter: rewriter,
+	})
+
+	cfg := sampleRuntimeConfig("global")
+	cfg.Devices[0].Scroll = config.ScrollConfig{
+		Direction: "standard",
+	}
+	if err := runtime.ApplyConfig(cfg); err != nil {
+		t.Fatalf("ApplyConfig returned error: %v", err)
+	}
+
+	if err := runtime.Run(context.Background()); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	if len(rewriter.records) != 1 {
+		t.Fatalf("len(rewriter.records) = %d, want 1", len(rewriter.records))
+	}
+}
+
 var _ platformmacos.ScrollRewriter = (*fakeScrollRewriter)(nil)
+var _ platformmacos.ScrollRewriter = (*orderCheckingScrollRewriter)(nil)
 
 func sampleRuntimeConfig(profileID string) *config.Config {
 	return &config.Config{

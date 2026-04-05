@@ -64,7 +64,7 @@ func (a *Adapter) decodeStandardReport(report events.RawReport, decoded decodedR
 	if decoded.buttons&buttonMaskGesture != 0 && (decoded.deltaX != 0 || decoded.deltaY != 0) {
 		out = append(out, pointerMoveEvent(report, decoded.deltaX, decoded.deltaY))
 	}
-	out = append(out, emitTicks(report, decoded.wheel, "wheel_up", "wheel_down")...)
+	out = append(out, emitTicks(report, decoded.wheel, "wheel_down", "wheel_up")...)
 	out = append(out, emitTicks(report, decoded.thumbWheel, "thumb_wheel_right", "thumb_wheel_left")...)
 	return out
 }

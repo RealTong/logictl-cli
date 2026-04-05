@@ -35,7 +35,8 @@ English | [简体中文](README_ZH.md)
 2. Install the stable background binary with `./bin/logictl daemon install`
 3. Start the foreground daemon with `./bin/logictl daemon run`, or start the persistent LaunchAgent with `./bin/logictl daemon start`
 4. In another terminal, run `./bin/logictl daemon status`
-5. Reload config changes with `./bin/logictl reload`
+5. Edit `~/.config/logictl/config.toml`
+6. Apply config changes explicitly with `./bin/logictl reload`
 
 ## Background Daemon Permissions
 
@@ -45,6 +46,7 @@ English | [简体中文](README_ZH.md)
 - On macOS, `~/.config/logictl/state/logictl-daemon` needs its own `Input Monitoring` permission. If `daemon start` reports a permission error, add that exact path to `System Settings -> Privacy & Security -> Input Monitoring`, then retry.
 - Rebuilding `./bin/logictl` alone does not change the background daemon binary. Permissions usually only need to be revisited after you run `./bin/logictl daemon install` again.
 - macOS does not provide a normal scriptable way to auto-grant `Input Monitoring` or `Accessibility` to an arbitrary local CLI binary. `tccutil` can reset prompts, but it cannot grant access.
+- Config changes are manual by design. After editing `~/.config/logictl/config.toml`, run `./bin/logictl reload`.
 
 ## MX Master 4 BLE Notes
 
@@ -84,5 +86,7 @@ See [examples/config.toml](examples/config.toml) for the current example file.
 - `go test ./...`
 - `./bin/logictl doctor`
 - `./bin/logictl devices list`
+
+`./bin/logictl doctor` also shows the exact config path currently being inspected.
 
 The manual validation checklist is in [docs/manual-smoke-test.md](docs/manual-smoke-test.md).

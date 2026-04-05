@@ -26,7 +26,8 @@
 1. Run `./bin/logictl daemon run`
 2. In another terminal, run `./bin/logictl daemon status`
 3. Confirm the output is `running`
-4. In the second terminal, run `./bin/logictl reload`
+4. Edit `~/.config/logictl/config.toml`
+5. In the second terminal, run `./bin/logictl reload`
 5. Confirm the output is `reload requested`
 6. With `devices.scroll.direction = "standard"`, confirm the main wheel and thumb wheel now move in the Windows-style direction while the daemon is running.
 7. Flip `devices.scroll.direction` back to `"natural"`, run `./bin/logictl reload`, and confirm the native macOS direction returns.

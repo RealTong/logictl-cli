@@ -1,14 +1,9 @@
 package config
 
 type Config struct {
-	Daemon   DaemonConfig `toml:"daemon"`
 	Devices  []Device     `toml:"devices"`
 	Actions  []Action     `toml:"actions"`
 	Profiles []Profile    `toml:"profiles"`
-}
-
-type DaemonConfig struct {
-	ReloadOnChange bool `toml:"reload_on_change"`
 }
 
 type Device struct {

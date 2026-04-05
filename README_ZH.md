@@ -35,7 +35,8 @@
 2. 安装稳定的后台二进制：`./bin/logictl daemon install`
 3. 以前台方式运行 daemon：`./bin/logictl daemon run`，或者启动持久化 LaunchAgent：`./bin/logictl daemon start`
 4. 在另一个终端中执行：`./bin/logictl daemon status`
-5. 修改配置后执行：`./bin/logictl reload`
+5. 修改 `~/.config/logictl/config.toml`
+6. 手动执行：`./bin/logictl reload`
 
 ## 后台 Daemon 权限
 
@@ -45,6 +46,7 @@
 - 在 macOS 上，`~/.config/logictl/state/logictl-daemon` 需要单独授予 `Input Monitoring` 权限。如果 `daemon start` 报权限错误，请到 `System Settings -> Privacy & Security -> Input Monitoring` 中添加这个精确路径，然后重试。
 - 仅重新构建 `./bin/logictl` 不会改变后台 daemon 二进制。通常只有在再次执行 `./bin/logictl daemon install` 之后，才可能需要重新确认权限。
 - macOS 没有常规的脚本化方式去直接授予任意本地 CLI 程序 `Input Monitoring` 或 `Accessibility` 权限。`tccutil` 只能重置提示，不能直接授权。
+- 配置修改采用手动生效策略。编辑 `~/.config/logictl/config.toml` 后，请执行 `./bin/logictl reload`。
 
 ## MX Master 4 BLE 说明
 
@@ -84,5 +86,7 @@
 - `go test ./...`
 - `./bin/logictl doctor`
 - `./bin/logictl devices list`
+
+`./bin/logictl doctor` 会额外显示当前正在检查的配置文件路径。
 
 手动验证清单见 [docs/manual-smoke-test.md](docs/manual-smoke-test.md)。

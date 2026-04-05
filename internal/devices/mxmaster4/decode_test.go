@@ -91,11 +91,11 @@ func TestAdapterDecodeVerticalWheelTicks(t *testing.T) {
 	if len(stream) != 2 {
 		t.Fatalf("len(stream) = %d, want 2", len(stream))
 	}
-	if stream[0].Gesture != "wheel_up" {
-		t.Fatalf("stream[0] = %#v, want wheel_up", stream[0])
+	if stream[0].Gesture != "wheel_down" {
+		t.Fatalf("stream[0] = %#v, want wheel_down", stream[0])
 	}
-	if stream[1].Gesture != "wheel_down" {
-		t.Fatalf("stream[1] = %#v, want wheel_down", stream[1])
+	if stream[1].Gesture != "wheel_up" {
+		t.Fatalf("stream[1] = %#v, want wheel_up", stream[1])
 	}
 }
 

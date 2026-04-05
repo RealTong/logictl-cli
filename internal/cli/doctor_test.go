@@ -61,6 +61,9 @@ func TestDoctorReportsMissingAccessibilityPermission(t *testing.T) {
 	if !strings.Contains(got, "Frontmost App: com.google.Chrome") {
 		t.Fatalf("output = %q, want active bundle ID", got)
 	}
+	if !strings.Contains(got, "Config Path: ../../testdata/config/valid.toml") {
+		t.Fatalf("output = %q, want config path", got)
+	}
 	if !strings.Contains(got, "Config: valid") {
 		t.Fatalf("output = %q, want valid config status", got)
 	}
@@ -92,6 +95,9 @@ func TestDoctorReportsMissingConfig(t *testing.T) {
 	got := buf.String()
 	if !strings.Contains(got, "Frontmost App: unavailable") {
 		t.Fatalf("output = %q, want unavailable active app", got)
+	}
+	if !strings.Contains(got, "Config Path: /tmp/definitely-missing-logictl-config.toml") {
+		t.Fatalf("output = %q, want config path", got)
 	}
 	if !strings.Contains(got, "Config: missing") {
 		t.Fatalf("output = %q, want missing config status", got)

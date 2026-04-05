@@ -172,6 +172,13 @@ func (r *Runtime) Run(ctx context.Context) error {
 				continue
 			}
 
+			if r.scrollRewriter != nil && isScrollGesture(event.Gesture) {
+				settings := r.scrollSettingsFor(event.DeviceID)
+				if settings != (config.ScrollConfig{}) && shouldRewriteScroll(settings) {
+					r.scrollRewriter.Record(event.DeviceID, event.Gesture, settings, event.At)
+				}
+			}
+
 			appBundleID, err := r.appResolver.ActiveBundleID(ctx)
 			if err != nil {
 				return err
@@ -180,13 +187,6 @@ func (r *Runtime) Run(ctx context.Context) error {
 			matcher := r.currentMatcher()
 			if matcher == nil {
 				continue
-			}
-
-			if r.scrollRewriter != nil && isScrollGesture(event.Gesture) {
-				settings := r.scrollSettingsFor(event.DeviceID)
-				if settings != (config.ScrollConfig{}) && shouldRewriteScroll(settings) {
-					r.scrollRewriter.Record(event.DeviceID, event.Gesture, settings, event.At)
-				}
 			}
 
 			action, err := matcher.Match(rules.Context{AppBundleID: appBundleID}, event)
