@@ -1,5 +1,7 @@
 # logictl
 
+English | [简体中文](README_ZH.md)
+
 `logictl` is a macOS-first CLI and daemon for Logitech device customization, focused on replacing the input remapping parts of Logi Options+ for `MX Master 4`.
 
 ## Current Scope
