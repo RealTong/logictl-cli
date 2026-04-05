@@ -48,7 +48,10 @@ func StartLaunchAgent(ctx context.Context, paths appcore.Paths, binary string) e
 	}
 
 	_ = runLaunchctl(ctx, "bootout", domain, paths.PlistFile)
-	return runLaunchctl(ctx, "bootstrap", domain, paths.PlistFile)
+	if err := runLaunchctl(ctx, "bootstrap", domain, paths.PlistFile); err != nil {
+		return err
+	}
+	return runLaunchctl(ctx, "kickstart", "-k", domain+"/"+launchAgentLabel)
 }
 
 func StopLaunchAgent(ctx context.Context, paths appcore.Paths) error {
@@ -73,7 +76,10 @@ func RestartLaunchAgent(ctx context.Context, paths appcore.Paths, binary string)
 	if err := runLaunchctl(ctx, "bootout", domain, paths.PlistFile); err != nil {
 		return err
 	}
-	return runLaunchctl(ctx, "bootstrap", domain, paths.PlistFile)
+	if err := runLaunchctl(ctx, "bootstrap", domain, paths.PlistFile); err != nil {
+		return err
+	}
+	return runLaunchctl(ctx, "kickstart", "-k", domain+"/"+launchAgentLabel)
 }
 
 func launchctlDomain() (string, error) {

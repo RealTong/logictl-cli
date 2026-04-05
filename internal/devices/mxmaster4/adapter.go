@@ -10,8 +10,7 @@ import (
 const productID = 0xb042
 
 type Adapter struct {
-	pressedButtons  byte
-	hapticPanelSeen bool
+	pressedButtons byte
 }
 
 func (Adapter) Matches(info hidapi.DeviceInfo) bool {
@@ -46,16 +45,10 @@ func (a *Adapter) Decode(report events.RawReport) ([]events.DeviceEvent, error) 
 func (a *Adapter) decodeStandardReport(report events.RawReport, decoded decodedReport) []events.DeviceEvent {
 	out := make([]events.DeviceEvent, 0, len(buttonSpecs)+4)
 
-	if isHapticPanelPress(decoded) {
-		if !a.hapticPanelSeen {
-			out = append(out, triggerEvent(report, "haptic_panel_press"))
-			a.hapticPanelSeen = true
-		}
-	} else {
-		a.hapticPanelSeen = false
-	}
-
 	changed := a.pressedButtons ^ decoded.buttons
+	if changed&buttonMaskHaptic != 0 && decoded.buttons&buttonMaskHaptic != 0 {
+		out = append(out, triggerEvent(report, "haptic_panel_press"))
+	}
 	for _, spec := range buttonSpecs {
 		if changed&spec.mask == 0 {
 			continue
@@ -92,14 +85,6 @@ func emitTicks(report events.RawReport, delta int, positive, negative string) []
 		out = append(out, triggerEvent(report, gesture))
 	}
 	return out
-}
-
-func isHapticPanelPress(decoded decodedReport) bool {
-	return decoded.buttons == 0 &&
-		decoded.deltaX == 1 &&
-		decoded.deltaY == 0 &&
-		decoded.wheel == 0 &&
-		decoded.thumbWheel == 0
 }
 
 func modeGesture(freeSpin bool) string {

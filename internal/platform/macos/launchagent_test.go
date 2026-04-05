@@ -41,7 +41,7 @@ func TestInstallLaunchAgentWritesExpectedPlist(t *testing.T) {
 	}
 }
 
-func TestRestartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
+func TestRestartLaunchAgentRunsBootoutBootstrapThenKickstart(t *testing.T) {
 	paths := launchAgentTestPaths(t)
 	binary := "/tmp/logictl-daemon"
 
@@ -65,8 +65,8 @@ func TestRestartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
 		t.Fatalf("RestartLaunchAgent returned error: %v", err)
 	}
 
-	if len(calls) != 2 {
-		t.Fatalf("len(calls) = %d, want 2", len(calls))
+	if len(calls) != 3 {
+		t.Fatalf("len(calls) = %d, want 3", len(calls))
 	}
 	if got, want := calls[0], "bootout gui/501 "+paths.PlistFile; got != want {
 		t.Fatalf("calls[0] = %q, want %q", got, want)
@@ -74,9 +74,12 @@ func TestRestartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
 	if got, want := calls[1], "bootstrap gui/501 "+paths.PlistFile; got != want {
 		t.Fatalf("calls[1] = %q, want %q", got, want)
 	}
+	if got, want := calls[2], "kickstart -k gui/501/"+launchAgentLabel; got != want {
+		t.Fatalf("calls[2] = %q, want %q", got, want)
+	}
 }
 
-func TestStartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
+func TestStartLaunchAgentRunsBootoutBootstrapThenKickstart(t *testing.T) {
 	paths := launchAgentTestPaths(t)
 	binary := "/tmp/logictl-daemon"
 
@@ -100,14 +103,17 @@ func TestStartLaunchAgentRunsBootoutThenBootstrap(t *testing.T) {
 		t.Fatalf("StartLaunchAgent returned error: %v", err)
 	}
 
-	if len(calls) != 2 {
-		t.Fatalf("len(calls) = %d, want 2", len(calls))
+	if len(calls) != 3 {
+		t.Fatalf("len(calls) = %d, want 3", len(calls))
 	}
 	if got, want := calls[0], "bootout gui/501 "+paths.PlistFile; got != want {
 		t.Fatalf("calls[0] = %q, want %q", got, want)
 	}
 	if got, want := calls[1], "bootstrap gui/501 "+paths.PlistFile; got != want {
 		t.Fatalf("calls[1] = %q, want %q", got, want)
+	}
+	if got, want := calls[2], "kickstart -k gui/501/"+launchAgentLabel; got != want {
+		t.Fatalf("calls[2] = %q, want %q", got, want)
 	}
 }
 
@@ -138,14 +144,17 @@ func TestStartLaunchAgentIgnoresBootoutFailureWhenServiceIsAbsent(t *testing.T) 
 		t.Fatalf("StartLaunchAgent returned error: %v", err)
 	}
 
-	if len(calls) != 2 {
-		t.Fatalf("len(calls) = %d, want 2", len(calls))
+	if len(calls) != 3 {
+		t.Fatalf("len(calls) = %d, want 3", len(calls))
 	}
 	if got, want := calls[0], "bootout gui/501 "+paths.PlistFile; got != want {
 		t.Fatalf("calls[0] = %q, want %q", got, want)
 	}
 	if got, want := calls[1], "bootstrap gui/501 "+paths.PlistFile; got != want {
 		t.Fatalf("calls[1] = %q, want %q", got, want)
+	}
+	if got, want := calls[2], "kickstart -k gui/501/"+launchAgentLabel; got != want {
+		t.Fatalf("calls[2] = %q, want %q", got, want)
 	}
 }
 

@@ -18,7 +18,8 @@ const (
 	buttonMaskBack    = 0x08
 	buttonMaskForward = 0x10
 	buttonMaskGesture = 0x20
-	knownButtonMask   = buttonMaskLeft | buttonMaskRight | buttonMaskMiddle | buttonMaskBack | buttonMaskForward | buttonMaskGesture
+	buttonMaskHaptic  = 0x40
+	knownButtonMask   = buttonMaskLeft | buttonMaskRight | buttonMaskMiddle | buttonMaskBack | buttonMaskForward | buttonMaskGesture | buttonMaskHaptic
 )
 
 var ErrUnsupportedReport = errors.New("unsupported mx master 4 report")
